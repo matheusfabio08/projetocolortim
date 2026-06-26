@@ -1,12 +1,11 @@
-import { Router, Response } from 'express';
+import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 
 const router = Router();
-router.use(authMiddleware);
 
-const ProductionSchema = z.object({
+const schema = z.object({
   po_id: z.number(),
   box_number: z.string(),
   machine: z.string(),
@@ -17,29 +16,27 @@ const ProductionSchema = z.object({
   meters_produced: z.number(),
 });
 
-router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
-  const parsed = ProductionSchema.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ error: parsed.error.flatten() }); return; }
-  const d = parsed.data;
+router.post('/', authMiddleware, async (req: AuthRequest, res): Promise<void> => {
+  try {
+    const v = schema.parse(req.body);
+    await prisma.poProduction.create({
+      data: { opId: v.po_id, boxNumber: v.box_number, machine: v.machine, operator: v.operator, hasAdjustment: v.has_adjustment, startDate: v.start_date, endDate: v.end_date, metersProduced: v.meters_produced },
+    });
+    await prisma.productionOrder.update({ where: { id: v.po_id }, data: { status: 'secadora', currentStage: 'producao' } });
+    await prisma.activityLog.create({ data: { opId: v.po_id, stage: 'producao', action: 'completed', userId: req.user!.id } });
+    res.json({ success: true });
+  } catch (err) {
+    if (err instanceof z.ZodError) { res.status(400).json({ error: 'Dados inválidos', details: err.errors }); return; }
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
 
-  await prisma.poProduction.create({
-    data: {
-      opId: d.po_id, boxNumber: d.box_number, machine: d.machine,
-      operator: d.operator, hasAdjustment: d.has_adjustment,
-      startDate: d.start_date, endDate: d.end_date, metersProduced: d.meters_produced,
-    },
+router.get('/records', authMiddleware, async (_req, res): Promise<void> => {
+  const ops = await prisma.productionOrder.findMany({
+    where: { status: 'producao', isCompleted: false },
+    orderBy: [{ priority: 'desc' }, { entryDate: 'asc' }],
   });
-
-  await prisma.productionOrder.update({
-    where: { id: d.po_id },
-    data: { status: 'secadora', currentStage: 'producao' },
-  });
-
-  await prisma.activityLog.create({
-    data: { opId: d.po_id, stage: 'producao', action: 'completed', userId: req.user!.id },
-  });
-
-  res.json({ success: true });
+  res.json(ops);
 });
 
 export default router;
