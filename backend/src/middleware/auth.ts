@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifyToken } from '../lib/jwt.js';
-import { prisma } from '../lib/prisma.js';
+import jwt from 'jsonwebtoken';
+import prisma from '../lib/prisma';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -11,78 +11,67 @@ export interface AuthRequest extends Request {
     role: string;
     isActive: boolean;
   };
-  sessionId?: string;
 }
 
-export async function authMiddleware(
+export const authMiddleware = async (
   req: AuthRequest,
   res: Response,
   next: NextFunction
-): Promise<void> {
+): Promise<void> => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+
+  if (!token) {
+    res.status(401).json({ error: 'Não autorizado' });
+    return;
+  }
+
   try {
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.startsWith('Bearer ')
-      ? authHeader.slice(7)
-      : req.cookies?.colortim_token;
+    const secret = process.env.JWT_SECRET;
+    if (!secret) throw new Error('JWT_SECRET não configurado');
 
-    if (!token) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
-    }
+    const payload = jwt.verify(token, secret) as { userId: string; sessionId: string };
 
-    let payload;
-    try {
-      payload = verifyToken(token);
-    } catch {
-      res.status(401).json({ error: 'Token inválido ou expirado' });
-      return;
-    }
-
-    // Verify session still exists in DB (allows server-side logout)
+    // Verify session still exists in DB (allows logout/revocation)
     const session = await prisma.session.findUnique({
-      where: { token },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            name: true,
-            email: true,
-            role: true,
-            isActive: true,
-          },
-        },
-      },
+      where: { id: payload.sessionId },
+      include: { user: true },
     });
 
     if (!session || session.expiresAt < new Date()) {
-      res.status(401).json({ error: 'Sessão expirada' });
+      res.status(401).json({ error: 'Sessão expirada ou inválida' });
       return;
     }
 
     if (!session.user.isActive) {
-      res.status(401).json({ error: 'Usuário desativado' });
+      res.status(403).json({ error: 'Usuário desativado' });
       return;
     }
 
-    req.user = session.user;
-    req.sessionId = session.id;
-    next();
-  } catch (error) {
-    res.status(500).json({ error: 'Erro interno de autenticação' });
-  }
-}
+    req.user = {
+      id: session.user.id,
+      username: session.user.username,
+      name: session.user.name,
+      email: session.user.email,
+      role: session.user.role,
+      isActive: session.user.isActive,
+    };
 
-export function requireRole(...roles: string[]) {
+    next();
+  } catch {
+    res.status(401).json({ error: 'Token inválido' });
+  }
+};
+
+export const requireRole = (...roles: string[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {
-      res.status(401).json({ error: 'Unauthorized' });
+      res.status(401).json({ error: 'Não autorizado' });
       return;
     }
     if (!roles.includes(req.user.role)) {
-      res.status(403).json({ error: 'Acesso negado' });
+      res.status(403).json({ error: 'Acesso negado para este perfil' });
       return;
     }
     next();
   };
-}
+};
