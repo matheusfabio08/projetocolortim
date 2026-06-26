@@ -3,53 +3,60 @@ import bcrypt from 'bcryptjs';
 import { prisma } from './lib/prisma';
 
 async function main() {
-  console.log('🌱 Iniciando seed...');
+  console.log('🌱 Seeding database...');
 
-  // Admin user
-  const adminHash = await bcrypt.hash('admin123', 12);
+  // Create admin user
+  const adminHash = await bcrypt.hash('Admin@2024!', 12);
   await prisma.user.upsert({
     where: { username: 'admin' },
     update: {},
-    create: { username: 'admin', passwordHash: adminHash, name: 'Administrador', email: 'admin@colortim.com.br', role: 'Admin' },
+    create: {
+      username: 'admin',
+      passwordHash: adminHash,
+      name: 'Administrador',
+      email: 'admin@colortim.com.br',
+      role: 'Admin',
+      isActive: true,
+    },
   });
+  console.log('✅ Admin user created: admin / Admin@2024!');
 
-  // Default fibers
-  const fibers = ['Algodão', 'Poliéster', 'Viscose', 'Modal', 'Nylon', 'Acrílico', 'Linho', 'Seda'];
-  for (const name of fibers) {
-    await prisma.fiber.upsert({ where: { name }, update: {}, create: { name } });
-  }
-
-  // Default regions
-  const regions = [
-    { name: 'Jaraguá do Sul', slug: 'jaragua' },
-    { name: 'Brusque', slug: 'brusque' },
-    { name: 'Gaspar', slug: 'gaspar' },
-  ];
-  for (const r of regions) {
-    await prisma.region.upsert({ where: { slug: r.slug }, update: {}, create: r });
-  }
-
-  // Sample transportadoras
-  const transportadoras = ['Jadlog', 'Correios', 'Transportadora Local', 'Retirada pelo Cliente'];
-  for (const name of transportadoras) {
-    const existing = await prisma.transportadora.findFirst({ where: { name } });
-    if (!existing) await prisma.transportadora.create({ data: { name } });
-  }
-
-  // Sample employees
-  const employees = [
-    { name: 'João Silva', sector: 'Preparação' },
+  // Create sample employees
+  const sectors = ['Preparação', 'Produção', 'Destrinchagem', 'Enrolagem', 'Qualidade', 'Laboratório'];
+  const sampleEmployees = [
+    { name: 'Carlos Silva', sector: 'Preparação' },
     { name: 'Maria Santos', sector: 'Produção' },
-    { name: 'Pedro Costa', sector: 'Qualidade' },
-    { name: 'Ana Lima', sector: 'Laboratório' },
+    { name: 'João Oliveira', sector: 'Destrinchagem' },
+    { name: 'Ana Costa', sector: 'Enrolagem' },
+    { name: 'Pedro Lima', sector: 'Qualidade' },
+    { name: 'Lucia Ferreira', sector: 'Laboratório' },
   ];
-  for (const emp of employees) {
-    const existing = await prisma.employee.findFirst({ where: { name: emp.name } });
-    if (!existing) await prisma.employee.create({ data: emp });
-  }
 
-  console.log('✅ Seed concluído!');
-  console.log('📌 Login: admin / admin123');
+  for (const emp of sampleEmployees) {
+    await prisma.employee.upsert({
+      where: { id: (await prisma.employee.findFirst({ where: { name: emp.name } }))?.id ?? 0 },
+      update: {},
+      create: emp,
+    });
+  }
+  console.log('✅ Sample employees created');
+
+  // Create sample fibers
+  const fibers = [
+    { name: 'Algodão', code: 'ALG' },
+    { name: 'Poliéster', code: 'POL' },
+    { name: 'Viscose', code: 'VIS' },
+    { name: 'Elastano', code: 'ELS' },
+    { name: 'Nylon', code: 'NYL' },
+  ];
+
+  for (const fiber of fibers) {
+    const exists = await prisma.fiber.findFirst({ where: { code: fiber.code } });
+    if (!exists) await prisma.fiber.create({ data: fiber });
+  }
+  console.log('✅ Sample fibers created');
+
+  console.log('🎉 Seed completed!');
 }
 
 main()

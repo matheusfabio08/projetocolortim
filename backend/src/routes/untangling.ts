@@ -5,7 +5,7 @@ import { prisma } from '../lib/prisma';
 
 const router = Router();
 
-const UntanglingSchema = z.object({
+const Schema = z.object({
   po_id: z.number(),
   num_employees: z.number(),
   meters_per_employee: z.number(),
@@ -15,26 +15,18 @@ const UntanglingSchema = z.object({
 });
 
 router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
-  const v = UntanglingSchema.parse(req.body);
-
-  await prisma.poUntangling.create({
-    data: { opId: v.po_id, numEmployees: v.num_employees, metersPerEmployee: v.meters_per_employee, employeeTimes: v.employee_times, startTime: v.start_time, endTime: v.end_time },
-  });
-
-  await prisma.productionOrder.update({ where: { id: v.po_id }, data: { status: 'enrolagem', currentStage: 'destrinchagem' } });
-  await prisma.activityLog.create({ data: { opId: v.po_id, stage: 'destrinchagem', action: 'completed', userId: req.user!.id } });
-
-  res.json({ success: true });
-});
-
-router.get('/records', authMiddleware, async (_req: AuthRequest, res: Response) => {
-  const ops = await prisma.productionOrder.findMany({
-    where: { status: 'destrinchagem', isCompleted: false },
-    orderBy: { entryDate: 'asc' },
-    include: { inProgress: true },
-  });
-
-  res.json({ waiting: ops.filter(op => op.inProgress.length === 0), inProgress: ops.filter(op => op.inProgress.length > 0) });
+  try {
+    const result = Schema.safeParse(req.body);
+    if (!result.success) return res.status(400).json({ error: result.error.errors[0].message });
+    const v = result.data;
+    const user = req.user!;
+    await prisma.poUntangling.create({ data: { opId: v.po_id, numEmployees: v.num_employees, metersPerEmployee: v.meters_per_employee, employeeTimes: v.employee_times, startTime: v.start_time, endTime: v.end_time } });
+    await prisma.productionOrder.update({ where: { id: v.po_id }, data: { status: 'enrolagem', currentStage: 'destrinchagem' } });
+    await prisma.activityLog.create({ data: { opId: v.po_id, stage: 'destrinchagem', action: 'completed', userId: user.id } });
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro na destrinchagem' });
+  }
 });
 
 export default router;

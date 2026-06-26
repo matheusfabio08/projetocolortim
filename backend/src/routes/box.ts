@@ -7,7 +7,7 @@ const router = Router();
 
 const BoxSchema = z.object({
   po_id: z.number(),
-  employee_id: z.number(),
+  employee_id: z.string(),
   has_adjustment: z.boolean().default(false),
   adjustment_details: z.string().optional(),
   is_reprocess: z.boolean().default(false),
@@ -15,43 +15,54 @@ const BoxSchema = z.object({
   timestamp: z.string(),
 });
 
-function makeBoxRoutes(boxNum: 4 | 5 | 6) {
+function createBoxRoutes(boxNum: 4 | 5 | 6) {
   const statusKey = `box${boxNum}` as const;
 
-  router.post(`/box${boxNum}`, authMiddleware, async (req: AuthRequest, res: Response) => {
-    const v = BoxSchema.parse(req.body);
-    const userId = req.user!.id;
-    const data = { opId: v.po_id, employeeId: v.employee_id, hasAdjustment: v.has_adjustment, adjustmentDetails: v.adjustment_details, isReprocess: v.is_reprocess, reprocessReason: v.reprocess_reason, timestamp: v.timestamp };
+  router.post(`/${statusKey}`, authMiddleware, async (req: AuthRequest, res: Response) => {
+    try {
+      const result = BoxSchema.safeParse(req.body);
+      if (!result.success) return res.status(400).json({ error: result.error.errors[0].message });
+      const v = result.data;
+      const user = req.user!;
 
-    if (boxNum === 4) await prisma.poBox4.create({ data });
-    else if (boxNum === 5) await prisma.poBox5.create({ data });
-    else await prisma.poBox6.create({ data });
+      const data = { poId: v.po_id, employeeId: v.employee_id, hasAdjustment: v.has_adjustment, adjustmentDetails: v.adjustment_details, isReprocess: v.is_reprocess, reprocessReason: v.reprocess_reason, timestamp: v.timestamp };
 
-    await prisma.productionOrder.update({ where: { id: v.po_id }, data: { status: 'producao', currentStage: statusKey } });
-    await prisma.activityLog.create({ data: { opId: v.po_id, stage: statusKey, action: 'processed', userId, details: `Emp ${v.employee_id}${v.has_adjustment ? ' - Ajuste' : ''}${v.is_reprocess ? ' - Reprocesso' : ''}` } });
+      if (boxNum === 4) await prisma.poBox4.create({ data });
+      else if (boxNum === 5) await prisma.poBox5.create({ data });
+      else await prisma.poBox6.create({ data });
 
-    res.json({ success: true });
+      await prisma.productionOrder.update({ where: { id: v.po_id }, data: { status: 'producao', currentStage: statusKey } });
+      await prisma.activityLog.create({ data: { opId: v.po_id, stage: statusKey, action: 'processed', userId: user.id, details: `Processado${v.has_adjustment ? ' - Com ajuste' : ''}${v.is_reprocess ? ' - Reprocesso' : ''}` } });
+
+      return res.json({ success: true });
+    } catch (error) {
+      return res.status(500).json({ error: `Erro no ${statusKey}` });
+    }
   });
 
-  router.get(`/box${boxNum}/records`, authMiddleware, async (_req: AuthRequest, res: Response) => {
-    const [waiting, inProgressRaw, recentlyDone] = await Promise.all([
-      prisma.productionOrder.findMany({ where: { status: statusKey, isCompleted: false }, orderBy: { entryDate: 'asc' }, include: { inProgress: true } }),
-      prisma.productionOrder.findMany({ where: { status: statusKey }, include: { inProgress: { where: { stage: statusKey } } } }),
-      prisma.productionOrder.findMany({
-        where: { status: 'producao', currentStage: statusKey, updatedAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
-        orderBy: { updatedAt: 'desc' },
-      }),
-    ]);
+  router.get(`/${statusKey}/records`, authMiddleware, async (req: AuthRequest, res: Response) => {
+    try {
+      const waiting = await prisma.productionOrder.findMany({ where: { status: statusKey }, orderBy: { createdAt: 'asc' } });
+      const inProgressIds = await prisma.poInProgress.findMany({ where: { stage: statusKey }, select: { opId: true } });
+      const ipSet = new Set(inProgressIds.map(x => x.opId));
 
-    const inProgress = inProgressRaw.filter(op => op.inProgress.length > 0);
-    const waitingFiltered = waiting.filter(op => !inProgress.find(ip => ip.id === op.id));
+      const waitingData = waiting.filter(op => !ipSet.has(op.id));
+      const inProgressData = waiting.filter(op => ipSet.has(op.id));
 
-    res.json({ waiting: waitingFiltered, inProgress, completed: recentlyDone });
+      const threshold = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const completed = await prisma.productionOrder.findMany({
+        where: { status: 'producao', currentStage: statusKey, updatedAt: { gte: threshold } },
+      });
+
+      return res.json({ waiting: waitingData, inProgress: inProgressData, completed });
+    } catch (error) {
+      return res.status(500).json({ error: `Erro ao buscar registros ${statusKey}` });
+    }
   });
 }
 
-makeBoxRoutes(4);
-makeBoxRoutes(5);
-makeBoxRoutes(6);
+createBoxRoutes(4);
+createBoxRoutes(5);
+createBoxRoutes(6);
 
 export default router;
