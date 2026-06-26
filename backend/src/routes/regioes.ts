@@ -1,14 +1,13 @@
-import { Router } from 'express';
-import { prisma } from '../lib/prisma.js';
-import { authMiddleware } from '../middleware/auth.js';
+import { Router, Response } from 'express';
+import prisma from '../lib/prisma';
+import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
+router.use(authMiddleware);
 
-router.get('/', authMiddleware, async (_req, res): Promise<void> => {
-  try {
-    const regions = await prisma.region.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } });
-    res.json(regions);
-  } catch { res.status(500).json({ error: 'Erro ao buscar regiões' }); }
+router.get('/', async (_req, res: Response) => {
+  const items = await prisma.regiao.findMany({ orderBy: { name: 'asc' } });
+  res.json(items);
 });
 
 export default router;

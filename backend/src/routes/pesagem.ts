@@ -1,48 +1,54 @@
-import { Router } from 'express';
-import { prisma } from '../lib/prisma.js';
-import { authMiddleware, AuthRequest } from '../middleware/auth.js';
+import { Router, Response } from 'express';
+import { z } from 'zod';
+import prisma from '../lib/prisma';
+import { authMiddleware, AuthRequest } from '../middleware/auth';
 
 const router = Router();
+router.use(authMiddleware);
 
-router.get('/records', authMiddleware, async (_req, res): Promise<void> => {
-  try {
-    const waiting = await prisma.productionOrder.findMany({
-      where: { requiresLab: true, lotNumber: null, parentOpId: null, recipeWeighed: false, pesagem: null },
-      include: { laboratory: true },
-      orderBy: { createdAt: 'desc' },
-    });
-    const inProgress = await prisma.productionOrder.findMany({
-      where: { requiresLab: true, pesagem: { isCompleted: false } },
-      include: { pesagem: true },
-    });
-    const completed = await prisma.productionOrder.findMany({
-      where: { requiresLab: true, recipeWeighed: true },
-      include: { pesagem: true },
-      orderBy: { updatedAt: 'desc' },
-      take: 50,
-    });
-    res.json({ waiting, inProgress, completed });
-  } catch { res.status(500).json({ error: 'Erro ao buscar pesagem' }); }
+const Schema = z.object({
+  op_id: z.number(),
+  employee_id: z.string(),
+  weight: z.number(),
+  notes: z.string().optional(),
+  timestamp: z.string(),
+  is_completed: z.boolean().default(false),
 });
 
-router.post('/start', authMiddleware, async (req: AuthRequest, res): Promise<void> => {
-  try {
-    const { op_id, employee_id } = req.body;
-    await prisma.poPesagem.create({ data: { opId: op_id, employeeId: employee_id, isCompleted: false } });
-    res.json({ success: true });
-  } catch { res.status(500).json({ error: 'Erro ao iniciar pesagem' }); }
+router.get('/records', async (_req, res: Response) => {
+  const records = await prisma.productionOrder.findMany({
+    where: { requiresLab: true, lotNumber: null, parentOpId: null },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      laboratory: { orderBy: { createdAt: 'desc' }, take: 1 },
+      pesagem: { orderBy: { createdAt: 'desc' }, take: 1 },
+    },
+  });
+  res.json(records);
 });
 
-router.post('/complete', authMiddleware, async (req: AuthRequest, res): Promise<void> => {
-  try {
-    const { op_id, end_time, observations } = req.body;
-    await prisma.poPesagem.update({
-      where: { opId: op_id },
-      data: { endTime: end_time, observations, isCompleted: true },
+router.post('/', async (req: AuthRequest, res: Response) => {
+  const v = Schema.parse(req.body);
+  await prisma.poPesagem.create({
+    data: {
+      opId: v.op_id,
+      employeeId: v.employee_id,
+      weight: v.weight,
+      notes: v.notes,
+      timestamp: v.timestamp,
+      isCompleted: v.is_completed,
+    },
+  });
+  if (v.is_completed) {
+    await prisma.productionOrder.update({
+      where: { id: v.op_id },
+      data: { recipeWeighed: true },
     });
-    await prisma.productionOrder.update({ where: { id: op_id }, data: { recipeWeighed: true } });
-    res.json({ success: true });
-  } catch { res.status(500).json({ error: 'Erro ao completar pesagem' }); }
+  }
+  await prisma.activityLog.create({
+    data: { opId: v.op_id, stage: 'pesagem', action: v.is_completed ? 'completed' : 'started', userId: req.user!.id },
+  });
+  res.json({ success: true });
 });
 
 export default router;
