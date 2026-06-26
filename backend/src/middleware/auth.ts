@@ -13,37 +13,36 @@ export interface AuthRequest extends Request {
   };
 }
 
-export const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const authMiddleware = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    res.status(401).json({ error: 'Token não fornecido' });
+    return;
+  }
+
+  const token = authHeader.slice(7);
+
   try {
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    const payload = jwt.verify(token, process.env.JWT_SECRET!) as any;
 
-    if (!token) {
-      return res.status(401).json({ error: 'Token de autenticação não fornecido' });
-    }
-
-    const jwtSecret = process.env.JWT_SECRET;
-    if (!jwtSecret) throw new Error('JWT_SECRET not configured');
-
-    let payload: any;
-    try {
-      payload = jwt.verify(token, jwtSecret);
-    } catch {
-      return res.status(401).json({ error: 'Token inválido ou expirado' });
-    }
-
-    // Validate session exists in DB (allows server-side logout)
+    // Valida sessão no banco (invalida se logout foi feito)
     const session = await prisma.session.findUnique({
       where: { token },
       include: { user: true },
     });
 
     if (!session || session.expiresAt < new Date()) {
-      return res.status(401).json({ error: 'Sessão expirada ou inválida' });
+      res.status(401).json({ error: 'Sessão expirada ou inválida' });
+      return;
     }
 
     if (!session.user.isActive) {
-      return res.status(403).json({ error: 'Usuário desativado' });
+      res.status(403).json({ error: 'Usuário desativado' });
+      return;
     }
 
     req.user = {
@@ -56,20 +55,16 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
     };
 
     next();
-  } catch (error) {
-    console.error('Auth middleware error:', error);
-    return res.status(500).json({ error: 'Erro interno de autenticação' });
+  } catch {
+    res.status(401).json({ error: 'Token inválido' });
   }
 };
 
-export const requireRole = (...roles: string[]) => {
-  return (req: AuthRequest, res: Response, next: NextFunction) => {
-    if (!req.user) {
-      return res.status(401).json({ error: 'Não autenticado' });
-    }
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ error: 'Permissão insuficiente' });
+export const requireRole = (...roles: string[]) =>
+  (req: AuthRequest, res: Response, next: NextFunction): void => {
+    if (!req.user || !roles.includes(req.user.role)) {
+      res.status(403).json({ error: 'Acesso negado' });
+      return;
     }
     next();
   };
-};

@@ -1,64 +1,51 @@
 import 'dotenv/config';
+import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { prisma } from './lib/prisma';
+
+const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Seeding database...');
+  console.log('🌱 Iniciando seed...');
 
-  // Create admin user
-  const adminHash = await bcrypt.hash('Admin@2024!', 12);
-  await prisma.user.upsert({
-    where: { username: 'admin' },
-    update: {},
-    create: {
-      username: 'admin',
-      passwordHash: adminHash,
-      name: 'Administrador',
-      email: 'admin@colortim.com.br',
-      role: 'Admin',
-      isActive: true,
-    },
-  });
-  console.log('✅ Admin user created: admin / Admin@2024!');
-
-  // Create sample employees
-  const sectors = ['Preparação', 'Produção', 'Destrinchagem', 'Enrolagem', 'Qualidade', 'Laboratório'];
-  const sampleEmployees = [
-    { name: 'Carlos Silva', sector: 'Preparação' },
-    { name: 'Maria Santos', sector: 'Produção' },
-    { name: 'João Oliveira', sector: 'Destrinchagem' },
-    { name: 'Ana Costa', sector: 'Enrolagem' },
-    { name: 'Pedro Lima', sector: 'Qualidade' },
-    { name: 'Lucia Ferreira', sector: 'Laboratório' },
-  ];
-
-  for (const emp of sampleEmployees) {
-    await prisma.employee.upsert({
-      where: { id: (await prisma.employee.findFirst({ where: { name: emp.name } }))?.id ?? 0 },
-      update: {},
-      create: emp,
+  // Admin
+  const existing = await prisma.user.findUnique({ where: { username: 'admin' } });
+  if (!existing) {
+    await prisma.user.create({
+      data: {
+        username: 'admin',
+        passwordHash: await bcrypt.hash('Admin@1234', 12),
+        name: 'Administrador',
+        email: 'admin@colortim.com.br',
+        role: 'Admin',
+      },
     });
+    console.log('✅ Usuário admin criado (admin / Admin@1234)');
+  } else {
+    console.log('ℹ️  Admin já existe');
   }
-  console.log('✅ Sample employees created');
 
-  // Create sample fibers
-  const fibers = [
-    { name: 'Algodão', code: 'ALG' },
-    { name: 'Poliéster', code: 'POL' },
-    { name: 'Viscose', code: 'VIS' },
-    { name: 'Elastano', code: 'ELS' },
-    { name: 'Nylon', code: 'NYL' },
+  // Fibras padrão
+  const fibras = ['Algodão', 'Poliéster', 'Viscose', 'Poliamida', 'Elastano', 'Modal', 'Linho'];
+  for (const name of fibras) {
+    await prisma.fiber.upsert({ where: { id: (await prisma.fiber.findFirst({ where: { name } }))?.id ?? 0 }, update: {}, create: { name } });
+  }
+  console.log('✅ Fibras criadas');
+
+  // Funcionários padrão
+  const employees = [
+    { name: 'João Silva', sector: 'Preparação' },
+    { name: 'Maria Santos', sector: 'Produção' },
+    { name: 'Pedro Lima', sector: 'Destrinchagem' },
+    { name: 'Ana Oliveira', sector: 'Enrolagem' },
+    { name: 'Carlos Costa', sector: 'Qualidade' },
   ];
-
-  for (const fiber of fibers) {
-    const exists = await prisma.fiber.findFirst({ where: { code: fiber.code } });
-    if (!exists) await prisma.fiber.create({ data: fiber });
+  for (const emp of employees) {
+    const exists = await prisma.employee.findFirst({ where: { name: emp.name } });
+    if (!exists) await prisma.employee.create({ data: emp });
   }
-  console.log('✅ Sample fibers created');
+  console.log('✅ Funcionários criados');
 
-  console.log('🎉 Seed completed!');
+  console.log('🎉 Seed concluído!');
 }
 
-main()
-  .catch(console.error)
-  .finally(() => prisma.$disconnect());
+main().catch(console.error).finally(() => prisma.$disconnect());

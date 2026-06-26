@@ -8,18 +8,17 @@ datasource db {
 }
 
 model User {
-  id           String    @id @default(uuid())
-  username     String    @unique
-  passwordHash String    @map("password_hash")
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String   @map("password_hash")
   name         String
-  email        String    @unique
-  role         String    @default("Operador") // Admin | PCP | Gerenciamento | Almoxarifado | Operador
-  isActive     Boolean   @default(true) @map("is_active")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  email        String   @unique
+  role         String   @default("Operador")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   sessions         Session[]
-  productionSheets ProductionSheet[]
   productionOrders ProductionOrder[]
   activityLogs     ActivityLog[]
 
@@ -39,20 +38,19 @@ model Session {
 }
 
 model ProductionSheet {
-  id            Int      @id @default(autoincrement())
-  sheetNumber   String   @unique @map("sheet_number")
-  client        String
-  color         String
-  orderNumber   String?  @map("order_number")
-  description   String?
-  entryDate     DateTime @map("entry_date")
-  expectedDate  DateTime @map("expected_date")
-  createdByUserId String @map("created_by_user_id")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id              Int      @id @default(autoincrement())
+  sheetNumber     String   @unique @map("sheet_number")
+  client          String
+  color           String
+  orderNumber     String?  @map("order_number")
+  description     String?
+  entryDate       DateTime @map("entry_date")
+  expectedDate    DateTime @map("expected_date")
+  createdByUserId String   @map("created_by_user_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
-  createdBy        User             @relation(fields: [createdByUserId], references: [id])
-  productionOrders ProductionOrder[]
+  orders ProductionOrder[]
 
   @@map("production_sheets")
 }
@@ -68,17 +66,17 @@ model ProductionOrder {
   expectedDate         DateTime @map("expected_date")
   material             String
   quantity             Float
-  unit                 String   @default("metros")
+  unit                 String   @default("kg")
   requiresLab          Boolean  @default(false) @map("requires_lab")
   requiresFabricQuality Boolean @default(false) @map("requires_fabric_quality")
   status               String   @default("preparacao")
   currentStage         String   @default("almoxarifado") @map("current_stage")
-  isCompleted          Boolean  @default(false) @map("is_completed")
+  responsibleUserId    String   @map("responsible_user_id")
+  description          String?
   priority             Int      @default(0)
   priorityNotes        String?  @map("priority_notes")
   sequenceOrder        Int?     @map("sequence_order")
-  responsibleUserId    String   @map("responsible_user_id")
-  description          String?
+  isCompleted          Boolean  @default(false) @map("is_completed")
   regionJaragua        Boolean  @default(false) @map("region_jaragua")
   regionBrusque        Boolean  @default(false) @map("region_brusque")
   regionGaspar         Boolean  @default(false) @map("region_gaspar")
@@ -92,26 +90,26 @@ model ProductionOrder {
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
 
-  sheet             ProductionSheet    @relation(fields: [sheetId], references: [id])
-  responsible       User               @relation(fields: [responsibleUserId], references: [id])
-  fiber             Fiber?             @relation("Fiber1", fields: [fiberId], references: [id])
-  fiber2            Fiber?             @relation("Fiber2", fields: [fiber2Id], references: [id])
-  parentOp          ProductionOrder?   @relation("Lots", fields: [parentOpId], references: [id])
-  childOps          ProductionOrder[]  @relation("Lots")
-  activityLogs      ActivityLog[]
-  inProgress        PoInProgress[]
-  preparation       PoPreparation[]
-  production        PoProduction[]
-  dryer             PoDryer[]
-  untangling        PoUntangling[]
-  rolling           PoRolling[]
-  quality           PoQuality[]
-  laboratory        PoLaboratory[]
-  box4              PoBox4[]
-  box5              PoBox5[]
-  box6              PoBox6[]
-  pesagem           PoPesagem[]
-  batchOps          BatchOp[]
+  sheet            ProductionSheet   @relation(fields: [sheetId], references: [id])
+  responsibleUser  User              @relation(fields: [responsibleUserId], references: [id])
+  fiber            Fiber?            @relation("PrimaryFiber", fields: [fiberId], references: [id])
+  fiber2           Fiber?            @relation("SecondaryFiber", fields: [fiber2Id], references: [id])
+  parentOp         ProductionOrder?  @relation("LotParent", fields: [parentOpId], references: [id])
+  childLots        ProductionOrder[] @relation("LotParent")
+  activityLogs     ActivityLog[]
+  preparation      PoPreparation?
+  production       PoProduction?
+  dryer            PoDryer?
+  untangling       PoUntangling?
+  rolling          PoRolling?
+  quality          PoQuality?
+  laboratory       PoLaboratory?
+  pesagem          PoPesagem?
+  box4             PoBox4?
+  box5             PoBox5?
+  box6             PoBox6?
+  inProgress       PoInProgress[]
+  batchOps         BatchOp[]
 
   @@map("production_orders")
 }
@@ -131,23 +129,9 @@ model ActivityLog {
   @@map("activity_log")
 }
 
-model PoInProgress {
-  id         Int      @id @default(autoincrement())
-  opId       Int      @map("op_id")
-  stage      String
-  boxNumber  String?  @map("box_number")
-  machine    String?
-  startedAt  DateTime @default(now()) @map("started_at")
-
-  op ProductionOrder @relation(fields: [opId], references: [id], onDelete: Cascade)
-
-  @@unique([opId, stage])
-  @@map("po_in_progress")
-}
-
 model PoPreparation {
   id             Int      @id @default(autoincrement())
-  opId           Int      @map("op_id")
+  opId           Int      @unique @map("op_id")
   employeeIds    Json     @map("employee_ids")
   startTime      String   @map("start_time")
   endTime        String   @map("end_time")
@@ -163,7 +147,7 @@ model PoPreparation {
 
 model PoProduction {
   id             Int      @id @default(autoincrement())
-  opId           Int      @map("op_id")
+  opId           Int      @unique @map("op_id")
   boxNumber      String   @map("box_number")
   machine        String
   operator       String
@@ -180,7 +164,7 @@ model PoProduction {
 
 model PoDryer {
   id          Int      @id @default(autoincrement())
-  opId        Int      @map("op_id")
+  opId        Int      @unique @map("op_id")
   destination String
   createdAt   DateTime @default(now()) @map("created_at")
 
@@ -190,14 +174,14 @@ model PoDryer {
 }
 
 model PoUntangling {
-  id                 Int      @id @default(autoincrement())
-  opId               Int      @map("op_id")
-  numEmployees       Int      @map("num_employees")
-  metersPerEmployee  Float    @map("meters_per_employee")
-  employeeTimes      Json     @map("employee_times")
-  startTime          String   @map("start_time")
-  endTime            String   @map("end_time")
-  createdAt          DateTime @default(now()) @map("created_at")
+  id                Int      @id @default(autoincrement())
+  opId              Int      @unique @map("op_id")
+  numEmployees      Int      @map("num_employees")
+  metersPerEmployee Float    @map("meters_per_employee")
+  employeeTimes     Json     @map("employee_times")
+  startTime         String   @map("start_time")
+  endTime           String   @map("end_time")
+  createdAt         DateTime @default(now()) @map("created_at")
 
   op ProductionOrder @relation(fields: [opId], references: [id], onDelete: Cascade)
 
@@ -206,7 +190,7 @@ model PoUntangling {
 
 model PoRolling {
   id               Int      @id @default(autoincrement())
-  opId             Int      @map("op_id")
+  opId             Int      @unique @map("op_id")
   employeeIds      Json     @map("employee_ids")
   numSplices       Int      @map("num_splices")
   numRolls         Int      @map("num_rolls")
@@ -221,12 +205,12 @@ model PoRolling {
 }
 
 model PoQuality {
-  id           Int      @id @default(autoincrement())
-  opId         Int      @map("op_id")
-  rollsSent    Int      @map("rolls_sent")
-  metersPerRoll Float   @map("meters_per_roll")
-  discrepancy  String?
-  createdAt    DateTime @default(now()) @map("created_at")
+  id            Int      @id @default(autoincrement())
+  opId          Int      @unique @map("op_id")
+  rollsSent     Int      @map("rolls_sent")
+  metersPerRoll Float    @map("meters_per_roll")
+  discrepancy   String?
+  createdAt     DateTime @default(now()) @map("created_at")
 
   op ProductionOrder @relation(fields: [opId], references: [id], onDelete: Cascade)
 
@@ -235,7 +219,7 @@ model PoQuality {
 
 model PoLaboratory {
   id               Int      @id @default(autoincrement())
-  opId             Int      @map("op_id")
+  opId             Int      @unique @map("op_id")
   numBatches       Int?     @map("num_batches")
   isRecipeReady    Boolean  @default(false) @map("is_recipe_ready")
   recipeOriginDate String?  @map("recipe_origin_date")
@@ -250,9 +234,21 @@ model PoLaboratory {
   @@map("po_laboratory")
 }
 
+model PoPesagem {
+  id        Int      @id @default(autoincrement())
+  opId      Int      @unique @map("op_id")
+  startTime String?  @map("start_time")
+  endTime   String?  @map("end_time")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  op ProductionOrder @relation(fields: [opId], references: [id], onDelete: Cascade)
+
+  @@map("po_pesagem")
+}
+
 model PoBox4 {
   id                Int      @id @default(autoincrement())
-  poId              Int      @map("po_id")
+  opId              Int      @unique @map("op_id")
   employeeId        String   @map("employee_id")
   hasAdjustment     Boolean  @default(false) @map("has_adjustment")
   adjustmentDetails String?  @map("adjustment_details")
@@ -261,14 +257,14 @@ model PoBox4 {
   timestamp         String
   createdAt         DateTime @default(now()) @map("created_at")
 
-  op ProductionOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  op ProductionOrder @relation(fields: [opId], references: [id], onDelete: Cascade)
 
   @@map("po_box4")
 }
 
 model PoBox5 {
   id                Int      @id @default(autoincrement())
-  poId              Int      @map("po_id")
+  opId              Int      @unique @map("op_id")
   employeeId        String   @map("employee_id")
   hasAdjustment     Boolean  @default(false) @map("has_adjustment")
   adjustmentDetails String?  @map("adjustment_details")
@@ -277,14 +273,14 @@ model PoBox5 {
   timestamp         String
   createdAt         DateTime @default(now()) @map("created_at")
 
-  op ProductionOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  op ProductionOrder @relation(fields: [opId], references: [id], onDelete: Cascade)
 
   @@map("po_box5")
 }
 
 model PoBox6 {
   id                Int      @id @default(autoincrement())
-  poId              Int      @map("po_id")
+  opId              Int      @unique @map("op_id")
   employeeId        String   @map("employee_id")
   hasAdjustment     Boolean  @default(false) @map("has_adjustment")
   adjustmentDetails String?  @map("adjustment_details")
@@ -293,24 +289,23 @@ model PoBox6 {
   timestamp         String
   createdAt         DateTime @default(now()) @map("created_at")
 
-  op ProductionOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  op ProductionOrder @relation(fields: [opId], references: [id], onDelete: Cascade)
 
   @@map("po_box6")
 }
 
-model PoPesagem {
-  id          Int      @id @default(autoincrement())
-  opId        Int      @map("op_id")
-  employeeId  String   @map("employee_id")
-  totalWeight Float    @map("total_weight")
-  startTime   String   @map("start_time")
-  endTime     String   @map("end_time")
-  notes       String?
-  createdAt   DateTime @default(now()) @map("created_at")
+model PoInProgress {
+  id        Int      @id @default(autoincrement())
+  opId      Int      @map("op_id")
+  stage     String
+  boxNumber String?  @map("box_number")
+  machine   String?
+  startedAt DateTime @default(now()) @map("started_at")
 
   op ProductionOrder @relation(fields: [opId], references: [id], onDelete: Cascade)
 
-  @@map("po_pesagem")
+  @@unique([opId, stage])
+  @@map("po_in_progress")
 }
 
 model PreparationBatch {
@@ -336,8 +331,8 @@ model BatchOp {
   opId          Int   @map("op_id")
   metersInBatch Float @map("meters_in_batch")
 
-  batch PreparationBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  op    ProductionOrder  @relation(fields: [opId], references: [id], onDelete: Cascade)
+  batch PreparationBatch @relation(fields: [batchId], references: [id])
+  op    ProductionOrder  @relation(fields: [opId], references: [id])
 
   @@map("batch_ops")
 }
@@ -348,31 +343,24 @@ model Employee {
   sector    String
   isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("employees")
 }
 
 model Fiber {
-  id          Int      @id @default(autoincrement())
-  name        String
-  code        String?  @unique
-  description String?
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
 
-  primaryOrders ProductionOrder[] @relation("Fiber1")
-  secondaryOrders ProductionOrder[] @relation("Fiber2")
+  primaryOrders   ProductionOrder[] @relation("PrimaryFiber")
+  secondaryOrders ProductionOrder[] @relation("SecondaryFiber")
 
-  @@map("fibras")
+  @@map("fibers")
 }
 
 model Transportadora {
   id        Int      @id @default(autoincrement())
   name      String
-  cnpj      String?  @unique
-  contact   String?
-  isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("transportadoras")
@@ -381,8 +369,6 @@ model Transportadora {
 model Regiao {
   id        Int      @id @default(autoincrement())
   name      String
-  code      String?  @unique
-  isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("regioes")
@@ -405,15 +391,14 @@ model FabricQualityInspection {
 }
 
 model ListaSaida {
-  id              Int      @id @default(autoincrement())
-  opNumber        String   @map("op_number")
-  client          String
-  color           String
-  totalMeters     Float    @map("total_meters")
-  transportadoraId Int?    @map("transportadora_id")
-  notes           String?
-  exitDate        String   @map("exit_date")
-  createdAt       DateTime @default(now()) @map("created_at")
+  id             Int      @id @default(autoincrement())
+  opId           Int      @map("op_id")
+  transportadora String?
+  regiao         String?
+  volumes        Int?
+  weight         Float?
+  notes          String?
+  createdAt      DateTime @default(now()) @map("created_at")
 
   @@map("lista_saida")
 }

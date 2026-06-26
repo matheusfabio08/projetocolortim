@@ -1,37 +1,58 @@
-import { Router, Response } from 'express';
-import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { Router } from 'express';
 import { prisma } from '../lib/prisma';
-
+import { authMiddleware } from '../middleware/auth';
 const router = Router();
+router.use(authMiddleware);
 
-router.post('/op-start', authMiddleware, async (req: AuthRequest, res: Response) => {
-  const { op_id, stage, box_number, machine } = req.body;
-  if (!op_id || !stage) { res.status(400).json({ error: 'op_id e stage obrigatórios' }); return; }
-
-  const existing = await prisma.poInProgress.findUnique({ where: { opId_stage: { opId: op_id, stage } } });
-  if (existing) { res.status(400).json({ error: 'OP já em andamento' }); return; }
-
-  await prisma.poInProgress.create({ data: { opId: op_id, stage, boxNumber: box_number, machine } });
-  res.json({ success: true, started_at: new Date().toISOString() });
+// Gerenciamento - todas as OPs
+router.get('/gerenciamento', async (req, res) => {
+  const { status, search } = req.query;
+  const where: any = {};
+  if (status) where.status = String(status);
+  if (search) where.OR = [{ opNumber: { contains: String(search), mode: 'insensitive' } }, { client: { contains: String(search), mode: 'insensitive' } }, { color: { contains: String(search), mode: 'insensitive' } }];
+  const ops = await prisma.productionOrder.findMany({ where, orderBy: [{ priority: 'desc' }, { expectedDate: 'asc' }], include: { activityLogs: { take: 1, orderBy: { createdAt: 'desc' } } } });
+  res.json(ops);
 });
 
-router.post('/op-stop', authMiddleware, async (req: AuthRequest, res: Response) => {
-  const { op_id, stage } = req.body;
-  if (!op_id || !stage) { res.status(400).json({ error: 'op_id e stage obrigatórios' }); return; }
-
-  const inProgress = await prisma.poInProgress.findUnique({ where: { opId_stage: { opId: op_id, stage } } });
-  if (!inProgress) { res.status(400).json({ error: 'OP não está em andamento' }); return; }
-
-  await prisma.poInProgress.delete({ where: { opId_stage: { opId: op_id, stage } } });
-  res.json({ success: true, started_at: inProgress.startedAt, stopped_at: new Date().toISOString() });
+// PCP
+router.get('/pcp', async (_req, res) => {
+  const ops = await prisma.productionOrder.findMany({ where: { isCompleted: false }, orderBy: [{ priority: 'desc' }, { expectedDate: 'asc' }] });
+  res.json(ops);
 });
 
-router.get('/op-status/:id/:stage', authMiddleware, async (req: AuthRequest, res: Response) => {
-  const inProgress = await prisma.poInProgress.findUnique({
-    where: { opId_stage: { opId: parseInt(req.params.id), stage: req.params.stage } },
-  });
+router.put('/pcp/priority/:id', async (req, res) => {
+  const { priority, priority_notes } = req.body;
+  await prisma.productionOrder.update({ where: { id: parseInt(req.params.id) }, data: { priority, priorityNotes: priority_notes } });
+  res.json({ success: true });
+});
 
-  res.json({ in_progress: !!inProgress, started_at: inProgress?.startedAt ?? null, box_number: inProgress?.boxNumber ?? null, machine: inProgress?.machine ?? null });
+router.put('/pcp/sequence/:id', async (req, res) => {
+  await prisma.productionOrder.update({ where: { id: parseInt(req.params.id) }, data: { sequenceOrder: req.body.sequence_order } });
+  res.json({ success: true });
+});
+
+router.get('/pcp/capacity-analysis', async (_req, res) => {
+  const stages = ['preparacao', 'producao', 'secadora', 'destrinchagem', 'enrolagem', 'qualidade'];
+  const capacity: any = {};
+  await Promise.all(stages.map(async (stage) => {
+    const [total, urgent] = await Promise.all([
+      prisma.productionOrder.count({ where: { status: stage, isCompleted: false } }),
+      prisma.productionOrder.count({ where: { status: stage, isCompleted: false, priority: { gte: 3 } } }),
+    ]);
+    capacity[stage] = { total, urgent };
+  }));
+  res.json(capacity);
+});
+
+router.get('/pcp/overdue', async (_req, res) => {
+  const ops = await prisma.productionOrder.findMany({ where: { isCompleted: false, expectedDate: { lt: new Date() } }, orderBy: { expectedDate: 'asc' } });
+  res.json(ops);
+});
+
+// Almoxarifado
+router.get('/almoxarifado', async (_req, res) => {
+  const ops = await prisma.productionOrder.findMany({ where: { status: { in: ['preparacao', 'qualidade_malhas'] } }, orderBy: { entryDate: 'asc' } });
+  res.json(ops);
 });
 
 export default router;

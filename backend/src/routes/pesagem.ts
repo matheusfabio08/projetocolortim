@@ -1,59 +1,41 @@
-import { Router, Response } from 'express';
-import { z } from 'zod';
-import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { Router } from 'express';
 import { prisma } from '../lib/prisma';
-
+import { authMiddleware } from '../middleware/auth';
 const router = Router();
+router.use(authMiddleware);
 
-const Schema = z.object({
-  op_id: z.number(),
-  employee_id: z.string(),
-  total_weight: z.number(),
-  start_time: z.string(),
-  end_time: z.string(),
-  notes: z.string().optional(),
+router.get('/records', async (_req, res) => {
+  const waiting = await prisma.productionOrder.findMany({
+    where: { requiresLab: true, lotNumber: null, parentOpId: null, recipeWeighed: false, pesagem: null },
+    include: { laboratory: true },
+    orderBy: { createdAt: 'desc' },
+  });
+  const inProgress = await prisma.productionOrder.findMany({
+    where: { requiresLab: true, pesagem: { startTime: { not: null }, endTime: null } },
+    include: { pesagem: true },
+  });
+  const completed = await prisma.productionOrder.findMany({
+    where: { requiresLab: true, pesagem: { endTime: { not: null } } },
+    include: { pesagem: true },
+    orderBy: { updatedAt: 'desc' },
+    take: 50,
+  });
+  res.json({ waiting, inProgress, completed });
 });
 
-router.get('/records', authMiddleware, async (_req: AuthRequest, res: Response) => {
-  try {
-    const waiting = await prisma.productionOrder.findMany({
-      where: { requiresLab: true, lotNumber: null, parentOpId: null, recipeWeighed: false, laboratory: { none: {} } },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    const inProgress = await prisma.$queryRaw`
-      SELECT po.*, pes.id as pesagem_id, pes.start_time as pesagem_start_time
-      FROM production_orders po
-      INNER JOIN po_pesagem pes ON po.id = pes.op_id
-      WHERE po.requires_lab = true AND po.recipe_weighed = false
-      LIMIT 100
-    `;
-
-    const completed = await prisma.productionOrder.findMany({
-      where: { requiresLab: true, recipeWeighed: true },
-      orderBy: { updatedAt: 'desc' },
-      take: 50,
-    });
-
-    return res.json({ waiting, inProgress, completed });
-  } catch (error) {
-    return res.status(500).json({ error: 'Erro ao buscar pesagens' });
-  }
+router.post('/start', async (req, res) => {
+  const { op_id, start_time } = req.body;
+  await prisma.poPesagem.create({ data: { opId: op_id, startTime: start_time } });
+  res.json({ success: true });
 });
 
-router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
-  try {
-    const result = Schema.safeParse(req.body);
-    if (!result.success) return res.status(400).json({ error: result.error.errors[0].message });
-    const v = result.data;
-    const user = req.user!;
-    await prisma.poPesagem.create({ data: { opId: v.op_id, employeeId: v.employee_id, totalWeight: v.total_weight, startTime: v.start_time, endTime: v.end_time, notes: v.notes } });
-    await prisma.productionOrder.update({ where: { id: v.op_id }, data: { recipeWeighed: true } });
-    await prisma.activityLog.create({ data: { opId: v.op_id, stage: 'pesagem', action: 'completed', userId: user.id } });
-    return res.json({ success: true });
-  } catch (error) {
-    return res.status(500).json({ error: 'Erro na pesagem' });
-  }
+router.post('/finish', async (req, res): Promise<void> => {
+  const { op_id, end_time } = req.body;
+  const p = await prisma.poPesagem.findUnique({ where: { opId: op_id } });
+  if (!p) { res.status(404).json({ error: 'Pesagem não encontrada' }); return; }
+  await prisma.poPesagem.update({ where: { opId: op_id }, data: { endTime: end_time } });
+  await prisma.productionOrder.update({ where: { id: op_id }, data: { recipeWeighed: true } });
+  res.json({ success: true });
 });
 
 export default router;

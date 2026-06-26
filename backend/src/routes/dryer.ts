@@ -1,22 +1,20 @@
-import { Router, Response } from 'express';
-import { z } from 'zod';
-import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { Router } from 'express';
 import { prisma } from '../lib/prisma';
-
+import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { z } from 'zod';
 const router = Router();
-
-router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.use(authMiddleware);
+const Schema = z.object({ po_id: z.number(), destination: z.string() });
+router.post('/', async (req: AuthRequest, res): Promise<void> => {
   try {
-    const { po_id, destination } = req.body;
-    if (!po_id || !destination) return res.status(400).json({ error: 'po_id e destination obrigatórios' });
-    const user = req.user!;
-    await prisma.poDryer.create({ data: { opId: po_id, destination } });
-    await prisma.productionOrder.update({ where: { id: po_id }, data: { status: destination, currentStage: 'secadora' } });
-    await prisma.activityLog.create({ data: { opId: po_id, stage: 'secadora', action: 'completed', userId: user.id } });
-    return res.json({ success: true });
-  } catch (error) {
-    return res.status(500).json({ error: 'Erro na secadora' });
+    const v = Schema.parse(req.body);
+    await prisma.poDryer.create({ data: { opId: v.po_id, destination: v.destination } });
+    await prisma.productionOrder.update({ where: { id: v.po_id }, data: { status: v.destination, currentStage: 'secadora' } });
+    await prisma.activityLog.create({ data: { opId: v.po_id, stage: 'secadora', action: 'completed', userId: req.user!.id } });
+    res.json({ success: true });
+  } catch (e: any) {
+    if (e.name === 'ZodError') { res.status(400).json({ error: 'Dados inválidos' }); return; }
+    res.status(500).json({ error: 'Erro' });
   }
 });
-
 export default router;
