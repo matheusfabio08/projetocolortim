@@ -1,23 +1,23 @@
-import { Router, Response } from 'express';
+import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
-router.use(authMiddleware);
 
-router.get('/', async (_req, res: Response) => {
-  const fibers = await prisma.fiber.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } });
-  res.json(fibers);
+router.get('/', authMiddleware, async (_req, res): Promise<void> => {
+  const fibras = await prisma.fiber.findMany({ orderBy: { name: 'asc' } });
+  res.json(fibras);
 });
 
-router.post('/', async (req, res: Response) => {
+router.post('/', authMiddleware, async (req, res): Promise<void> => {
   const { name, description } = req.body;
-  await prisma.fiber.create({ data: { name, description } });
-  res.status(201).json({ success: true });
+  if (!name) { res.status(400).json({ error: 'Nome é obrigatório' }); return; }
+  const fiber = await prisma.fiber.create({ data: { name, description } });
+  res.status(201).json(fiber);
 });
 
-router.put('/:id', async (req, res: Response) => {
-  await prisma.fiber.update({ where: { id: parseInt(req.params.id) }, data: req.body });
+router.delete('/:id', authMiddleware, async (req, res): Promise<void> => {
+  await prisma.fiber.delete({ where: { id: parseInt(req.params.id) } });
   res.json({ success: true });
 });
 
