@@ -1,18 +1,11 @@
-import { Router, Response } from 'express';
+import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
 
-const router = Router();
-router.use(authMiddleware);
+export const regioesRouter = Router();
+regioesRouter.use(authMiddleware);
 
-router.get('/', async (_req, res: Response) => {
-  const r = await prisma.region.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } });
-  res.json(r);
+regioesRouter.get('/', async (_req, res) => {
+  const list = await prisma.regiao.findMany({ orderBy: { name: 'asc' } });
+  return res.json(list);
 });
-
-router.post('/', async (req, res: Response) => {
-  await prisma.region.create({ data: { name: req.body.name } });
-  res.status(201).json({ success: true });
-});
-
-export default router;

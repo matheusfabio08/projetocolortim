@@ -1,10 +1,10 @@
-import { Router, Response } from 'express';
+import { Router } from 'express';
 import { prisma } from '../lib/prisma';
-import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { authMiddleware } from '../middleware/auth';
 
-const router = Router();
+export const dashboardRouter = Router();
 
-router.get('/kpis', authMiddleware, async (_req: AuthRequest, res: Response): Promise<void> => {
+dashboardRouter.get('/kpis', authMiddleware, async (_req, res) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
@@ -12,11 +12,9 @@ router.get('/kpis', authMiddleware, async (_req: AuthRequest, res: Response): Pr
 
   const [activeOps, overdueOps, completedToday] = await Promise.all([
     prisma.productionOrder.count({ where: { isCompleted: false } }),
-    prisma.productionOrder.count({ where: { isCompleted: false, expectedDate: { lt: today } } }),
+    prisma.productionOrder.count({ where: { isCompleted: false, expectedDate: { lt: new Date() } } }),
     prisma.productionOrder.count({ where: { isCompleted: true, updatedAt: { gte: today, lt: tomorrow } } }),
   ]);
 
-  res.json({ active_ops: activeOps, overdue_ops: overdueOps, completed_today: completedToday });
+  return res.json({ active_ops: activeOps, overdue_ops: overdueOps, completed_today: completedToday });
 });
-
-export default router;

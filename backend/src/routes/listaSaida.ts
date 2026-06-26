@@ -1,42 +1,29 @@
-import { Router, Response } from 'express';
+import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
-import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { authMiddleware } from '../middleware/auth';
 
-const router = Router();
+export const listaSaidaRouter = Router();
+listaSaidaRouter.use(authMiddleware);
 
-const Schema = z.object({
-  op_id: z.number(),
-  client_name: z.string(),
-  color: z.string(),
-  quantity: z.number(),
-  unit: z.string(),
-  transportadora: z.string().optional(),
-  notes: z.string().optional(),
-  exit_date: z.string(),
+listaSaidaRouter.get('/', async (_req, res) => {
+  const list = await prisma.listaSaida.findMany({ orderBy: { sentAt: 'desc' } });
+  return res.json(list);
 });
 
-router.get('/', authMiddleware, async (_req: AuthRequest, res: Response): Promise<void> => {
-  const records = await prisma.listaSaida.findMany({
-    include: { op: true },
-    orderBy: { exitDate: 'desc' },
-  });
-  res.json(records);
-});
-
-router.post('/', authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {
-  const v = Schema.safeParse(req.body);
-  if (!v.success) { res.status(400).json({ error: v.error.flatten() }); return; }
-  const d = v.data;
+listaSaidaRouter.post('/', async (req, res) => {
+  const v = z.object({
+    op_number: z.string(),
+    client: z.string(),
+    color: z.string(),
+    meters: z.number(),
+    rolls: z.number(),
+    destination: z.string().optional(),
+    carrier: z.string().optional(),
+    notes: z.string().optional(),
+  }).parse(req.body);
   const record = await prisma.listaSaida.create({
-    data: { opId: d.op_id, clientName: d.client_name, color: d.color, quantity: d.quantity, unit: d.unit, transportadora: d.transportadora, notes: d.notes, exitDate: new Date(d.exit_date) },
+    data: { opNumber: v.op_number, client: v.client, color: v.color, meters: v.meters, rolls: v.rolls, destination: v.destination, carrier: v.carrier, notes: v.notes },
   });
-  res.status(201).json(record);
+  return res.status(201).json(record);
 });
-
-router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {
-  await prisma.listaSaida.delete({ where: { id: parseInt(req.params.id) } });
-  res.json({ success: true });
-});
-
-export default router;

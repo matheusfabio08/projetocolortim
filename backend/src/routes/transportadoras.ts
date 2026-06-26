@@ -1,23 +1,22 @@
-import { Router, Response } from 'express';
+import { Router } from 'express';
 import { prisma } from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
 
-const router = Router();
-router.use(authMiddleware);
+export const transportadorasRouter = Router();
+transportadorasRouter.use(authMiddleware);
 
-router.get('/', async (_req, res: Response) => {
-  const t = await prisma.transporter.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } });
-  res.json(t);
+transportadorasRouter.get('/', async (_req, res) => {
+  const list = await prisma.transportadora.findMany({ orderBy: { name: 'asc' } });
+  return res.json(list);
 });
 
-router.post('/', async (req, res: Response) => {
-  await prisma.transporter.create({ data: { name: req.body.name, contact: req.body.contact } });
-  res.status(201).json({ success: true });
+transportadorasRouter.post('/', async (req, res) => {
+  const { name, contact } = req.body;
+  const t = await prisma.transportadora.create({ data: { name, contact } });
+  return res.status(201).json(t);
 });
 
-router.put('/:id', async (req, res: Response) => {
-  await prisma.transporter.update({ where: { id: parseInt(req.params.id) }, data: req.body });
-  res.json({ success: true });
+transportadorasRouter.delete('/:id', async (req, res) => {
+  await prisma.transportadora.delete({ where: { id: parseInt(req.params.id) } });
+  return res.json({ success: true });
 });
-
-export default router;

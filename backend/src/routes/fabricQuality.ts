@@ -1,55 +1,55 @@
-import { Router, Response } from 'express';
+import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
-import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { authMiddleware } from '../middleware/auth';
 
-const router = Router();
+export const fabricQualityRouter = Router();
+fabricQualityRouter.use(authMiddleware);
 
 const Schema = z.object({
   item_description: z.string().min(1),
-  weight: z.number().positive(),
-  destination_sector: z.string().min(1),
+  weight: z.number(),
+  destination_sector: z.string(),
   observations: z.string().optional(),
   defect_image_url: z.string().optional(),
-  employee_name: z.string().min(1),
+  employee_name: z.string(),
   inspection_date: z.string(),
 });
 
-router.get('/inspections', authMiddleware, async (_req: AuthRequest, res: Response): Promise<void> => {
-  const inspections = await prisma.fabricQualityInspection.findMany({ orderBy: { inspectionDate: 'desc' } });
-  res.json(inspections);
-});
-
-router.post('/inspections', authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {
-  const v = Schema.safeParse(req.body);
-  if (!v.success) { res.status(400).json({ error: v.error.flatten() }); return; }
-  const d = v.data;
-
+async function nextInspectionNumber() {
   const last = await prisma.fabricQualityInspection.findFirst({ orderBy: { id: 'desc' } });
-  const inspectionNumber = last
-    ? `INS-${String(parseInt(last.inspectionNumber.split('-')[1]) + 1).padStart(3, '0')}`
-    : 'INS-001';
+  if (!last) return 'INS-001';
+  const n = parseInt(last.inspectionNumber.split('-')[1]) + 1;
+  return `INS-${String(n).padStart(3, '0')}`;
+}
 
-  const inspection = await prisma.fabricQualityInspection.create({
-    data: { inspectionNumber, itemDescription: d.item_description, weight: d.weight, destinationSector: d.destination_sector, observations: d.observations, defectImageUrl: d.defect_image_url, employeeName: d.employee_name, inspectionDate: d.inspection_date },
-  });
-  res.status(201).json(inspection);
+fabricQualityRouter.get('/inspections', async (_req, res) => {
+  const list = await prisma.fabricQualityInspection.findMany({ orderBy: { inspectionDate: 'desc' } });
+  return res.json(list);
 });
 
-router.put('/inspections/:id', authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {
-  const v = Schema.safeParse(req.body);
-  if (!v.success) { res.status(400).json({ error: v.error.flatten() }); return; }
-  const d = v.data;
+fabricQualityRouter.get('/inspections/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const item = await prisma.fabricQualityInspection.findUnique({ where: { id } });
+  if (!item) return res.status(404).json({ error: 'Inspeção não encontrada' });
+  return res.json(item);
+});
+
+fabricQualityRouter.post('/inspections', async (req, res) => {
+  const v = Schema.parse(req.body);
+  const inspectionNumber = await nextInspectionNumber();
+  const record = await prisma.fabricQualityInspection.create({
+    data: { inspectionNumber, itemDescription: v.item_description, weight: v.weight, destinationSector: v.destination_sector, observations: v.observations, defectImageUrl: v.defect_image_url, employeeName: v.employee_name, inspectionDate: v.inspection_date },
+  });
+  return res.status(201).json({ success: true, inspection_number: inspectionNumber, id: record.id });
+});
+
+fabricQualityRouter.put('/inspections/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const v = Schema.parse(req.body);
   await prisma.fabricQualityInspection.update({
-    where: { id: parseInt(req.params.id) },
-    data: { itemDescription: d.item_description, weight: d.weight, destinationSector: d.destination_sector, observations: d.observations, defectImageUrl: d.defect_image_url, employeeName: d.employee_name, inspectionDate: d.inspection_date },
+    where: { id },
+    data: { itemDescription: v.item_description, weight: v.weight, destinationSector: v.destination_sector, observations: v.observations, defectImageUrl: v.defect_image_url, employeeName: v.employee_name, inspectionDate: v.inspection_date },
   });
-  res.json({ success: true });
+  return res.json({ success: true });
 });
-
-router.delete('/inspections/:id', authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {
-  await prisma.fabricQualityInspection.delete({ where: { id: parseInt(req.params.id) } });
-  res.json({ success: true });
-});
-
-export default router;

@@ -1,39 +1,34 @@
-import { Router, Response } from 'express';
+import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
-import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { authMiddleware } from '../middleware/auth';
 
-const router = Router();
+export const employeesRouter = Router();
+employeesRouter.use(authMiddleware);
 
-const Schema = z.object({ name: z.string().min(2), sector: z.string().min(1) });
-
-router.get('/', authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {
-  const { sector } = req.query;
-  const where: Record<string, unknown> = { isActive: true };
+employeesRouter.get('/', async (req, res) => {
+  const { sector } = req.query as { sector?: string };
+  const where: any = { isActive: true };
   if (sector && sector !== 'Todos') where.sector = sector;
   const employees = await prisma.employee.findMany({ where, orderBy: [{ sector: 'asc' }, { name: 'asc' }] });
-  res.json(employees);
+  return res.json(employees);
 });
 
-router.post('/', authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {
-  const v = Schema.safeParse(req.body);
-  if (!v.success) { res.status(400).json({ error: v.error.flatten() }); return; }
-  await prisma.employee.create({ data: v.data });
-  res.status(201).json({ success: true });
+employeesRouter.post('/', async (req, res) => {
+  const v = z.object({ name: z.string().min(1), sector: z.string().min(1) }).parse(req.body);
+  await prisma.employee.create({ data: { name: v.name, sector: v.sector } });
+  return res.status(201).json({ success: true });
 });
 
-router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {
+employeesRouter.put('/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
   const { name, sector, is_active } = req.body;
-  await prisma.employee.update({
-    where: { id: parseInt(req.params.id) },
-    data: { name, sector, isActive: is_active },
-  });
-  res.json({ success: true });
+  await prisma.employee.update({ where: { id }, data: { name, sector, isActive: is_active } });
+  return res.json({ success: true });
 });
 
-router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {
-  await prisma.employee.delete({ where: { id: parseInt(req.params.id) } });
-  res.json({ success: true });
+employeesRouter.delete('/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  await prisma.employee.delete({ where: { id } });
+  return res.json({ success: true });
 });
-
-export default router;

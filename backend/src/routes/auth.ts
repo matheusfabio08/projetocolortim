@@ -1,86 +1,61 @@
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 import { prisma } from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 
-const router = Router();
+export const authRouter = Router();
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: parseInt(process.env.LOGIN_RATE_LIMIT_MAX || '20', 10),
-  message: { error: 'Muitas tentativas de login. Tente novamente em 15 minutos.' },
+  max: 20,
+  message: { error: 'Muitas tentativas de login. Aguarde 15 minutos.' },
   skipSuccessfulRequests: true,
 });
 
-router.post('/login', loginLimiter, async (req: Request, res: Response): Promise<void> => {
+authRouter.post('/login', loginLimiter, async (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
-    res.status(400).json({ error: 'Usuário e senha são obrigatórios' });
-    return;
+    return res.status(400).json({ error: 'Usuário e senha são obrigatórios' });
   }
 
-  // Tempo constante para prevenir enumeração de usuários
-  const DUMMY_HASH = '$2a$12$dummyhashfornonexistentuser000000000000000000000000000';
+  // Busca usuário (tempo constante para evitar enumeração)
+  const user = await prisma.user.findUnique({ where: { username } });
+  const dummyHash = '$2a$12$invalido';
+  const hashToCheck = user?.passwordHash ?? dummyHash;
+  const isValid = await bcrypt.compare(password, hashToCheck);
 
-  const user = await prisma.user.findUnique({ where: { username } }).catch(() => null);
-
-  const hashToCompare = user?.passwordHash ?? DUMMY_HASH;
-  const isValid = await bcrypt.compare(password, hashToCompare);
-
-  if (!user || !isValid || !user.isActive) {
-    res.status(401).json({ error: 'Usuário ou senha inválidos' });
-    return;
+  if (!user || !user.isActive || !isValid) {
+    return res.status(401).json({ error: 'Usuário ou senha inválidos' });
   }
 
-  // Limpa sessões expiradas do usuário
-  await prisma.userSession.deleteMany({
-    where: { userId: user.id, expiresAt: { lt: new Date() } },
+  const secret = process.env.JWT_SECRET!;
+  const expiresIn = process.env.JWT_EXPIRES_IN || '8h';
+  const token = jwt.sign({ sub: user.id, role: user.role }, secret, { expiresIn } as any);
+
+  const expiresAt = new Date();
+  expiresAt.setHours(expiresAt.getHours() + 8);
+
+  await prisma.session.create({
+    data: { userId: user.id, token, expiresAt },
   });
 
-  const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000); // 8h
-
-  const session = await prisma.userSession.create({
-    data: {
-      userId: user.id,
-      token: require('crypto').randomBytes(32).toString('hex'),
-      expiresAt,
-    },
-  });
-
-  const token = jwt.sign(
-    { userId: user.id, sessionId: session.id },
-    process.env.JWT_SECRET!,
-    { expiresIn: '8h' }
-  );
-
-  res.json({
+  return res.json({
     token,
-    user: {
-      id: user.id,
-      username: user.username,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    },
+    user: { id: user.id, username: user.username, name: user.name, email: user.email, role: user.role },
   });
 });
 
-router.get('/me', authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {
-  res.json(req.user);
+authRouter.get('/me', authMiddleware, async (req: AuthRequest, res) => {
+  return res.json(req.user);
 });
 
-router.post('/logout', authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {
-  const token = req.headers.authorization?.split(' ')[1];
+authRouter.post('/logout', authMiddleware, async (req: AuthRequest, res) => {
+  const token = req.headers.authorization?.slice(7);
   if (token) {
-    const decoded = jwt.decode(token) as { sessionId?: string } | null;
-    if (decoded?.sessionId) {
-      await prisma.userSession.deleteMany({ where: { id: decoded.sessionId } }).catch(() => {});
-    }
+    await prisma.session.deleteMany({ where: { token } });
   }
-  res.json({ success: true });
+  return res.json({ success: true });
 });
-
-export default router;

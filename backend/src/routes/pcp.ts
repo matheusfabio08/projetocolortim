@@ -1,57 +1,43 @@
-import { Router, Response } from 'express';
+import { Router } from 'express';
 import { prisma } from '../lib/prisma';
-import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { authMiddleware } from '../middleware/auth';
 
-const router = Router();
+export const pcpRouter = Router();
+pcpRouter.use(authMiddleware);
 
-router.put('/priority/:id', authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {
+pcpRouter.put('/priority/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
   const { priority, priority_notes } = req.body;
-  await prisma.productionOrder.update({ where: { id: parseInt(req.params.id) }, data: { priority, priorityNotes: priority_notes } });
-  res.json({ success: true });
+  await prisma.productionOrder.update({ where: { id }, data: { priority, priorityNotes: priority_notes } });
+  return res.json({ success: true });
 });
 
-router.put('/sequence/:id', authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {
+pcpRouter.put('/sequence/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
   const { sequence_order } = req.body;
-  await prisma.productionOrder.update({ where: { id: parseInt(req.params.id) }, data: { sequenceOrder: sequence_order } });
-  res.json({ success: true });
+  await prisma.productionOrder.update({ where: { id }, data: { sequenceOrder: sequence_order } });
+  return res.json({ success: true });
 });
 
-router.get('/capacity-analysis', authMiddleware, async (_req: AuthRequest, res: Response): Promise<void> => {
+pcpRouter.get('/capacity-analysis', async (_req, res) => {
   const stages = ['preparacao', 'producao', 'secadora', 'destrinchagem', 'enrolagem', 'qualidade'];
-  const capacity: Record<string, { total: number; urgent: number }> = {};
-  for (const stage of stages) {
+  const capacity: Record<string, any> = {};
+  await Promise.all(stages.map(async (stage) => {
     const [total, urgent] = await Promise.all([
       prisma.productionOrder.count({ where: { status: stage, isCompleted: false } }),
       prisma.productionOrder.count({ where: { status: stage, isCompleted: false, priority: { gte: 3 } } }),
     ]);
     capacity[stage] = { total, urgent };
-  }
-  res.json(capacity);
+  }));
+  return res.json(capacity);
 });
 
-router.get('/overdue-ops', authMiddleware, async (_req: AuthRequest, res: Response): Promise<void> => {
-  const ops = await prisma.productionOrder.findMany({
-    where: { isCompleted: false, expectedDate: { lt: new Date() } },
-    orderBy: { expectedDate: 'asc' },
-  });
-  res.json(ops);
+pcpRouter.get('/overdue-ops', async (_req, res) => {
+  const ops = await prisma.productionOrder.findMany({ where: { isCompleted: false, expectedDate: { lt: new Date() } }, orderBy: { expectedDate: 'asc' } });
+  return res.json(ops);
 });
 
-router.get('/priority-ops', authMiddleware, async (_req: AuthRequest, res: Response): Promise<void> => {
-  const ops = await prisma.productionOrder.findMany({
-    where: { isCompleted: false, priority: { gt: 0 } },
-    orderBy: [{ priority: 'desc' }, { expectedDate: 'asc' }],
-  });
-  res.json(ops);
+pcpRouter.get('/priority-ops', async (_req, res) => {
+  const ops = await prisma.productionOrder.findMany({ where: { isCompleted: false, priority: { gt: 0 } }, orderBy: [{ priority: 'desc' }, { expectedDate: 'asc' }] });
+  return res.json(ops);
 });
-
-router.get('/all-ops', authMiddleware, async (_req: AuthRequest, res: Response): Promise<void> => {
-  const ops = await prisma.productionOrder.findMany({
-    where: { isCompleted: false },
-    orderBy: [{ priority: 'desc' }, { sequenceOrder: 'asc' }, { entryDate: 'asc' }],
-    include: { fiber: true, fiber2: true },
-  });
-  res.json(ops);
-});
-
-export default router;

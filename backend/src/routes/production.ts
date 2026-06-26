@@ -1,41 +1,55 @@
-import { Router, Response } from 'express';
+import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 
-const router = Router();
+export const productionRouter = Router();
+productionRouter.use(authMiddleware);
 
 const Schema = z.object({
   po_id: z.number(),
   box_number: z.string(),
   machine: z.string(),
   operator: z.string(),
-  has_adjustment: z.boolean().default(false),
+  has_adjustment: z.boolean().optional().default(false),
   start_date: z.string(),
   end_date: z.string(),
   meters_produced: z.number(),
 });
 
-router.post('/', authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {
-  const v = Schema.safeParse(req.body);
-  if (!v.success) { res.status(400).json({ error: v.error.flatten() }); return; }
-  const d = v.data;
-
+productionRouter.post('/', async (req: AuthRequest, res) => {
+  const v = Schema.parse(req.body);
   await prisma.poProduction.create({
-    data: { opId: d.po_id, boxNumber: d.box_number, machine: d.machine, operator: d.operator, hasAdjustment: d.has_adjustment, startDate: d.start_date, endDate: d.end_date, metersProduced: d.meters_produced },
+    data: { opId: v.po_id, boxNumber: v.box_number, machine: v.machine, operator: v.operator, hasAdjustment: v.has_adjustment, startDate: v.start_date, endDate: v.end_date, metersProduced: v.meters_produced },
   });
-  await prisma.productionOrder.update({ where: { id: d.po_id }, data: { status: 'secadora', currentStage: 'producao' } });
-  await prisma.activityLog.create({ data: { opId: d.po_id, stage: 'producao', action: 'completed', userId: req.user!.id } });
-  res.json({ success: true });
+  await prisma.productionOrder.update({ where: { id: v.po_id }, data: { status: 'secadora', currentStage: 'producao' } });
+  await prisma.activityLog.create({ data: { opId: v.po_id, stage: 'producao', action: 'completed', userId: req.user!.id } });
+  return res.json({ success: true });
 });
 
-router.get('/', authMiddleware, async (_req: AuthRequest, res: Response): Promise<void> => {
-  const ops = await prisma.productionOrder.findMany({
-    where: { status: { in: ['producao', 'box4', 'box5', 'box6'] }, isCompleted: false },
-    orderBy: [{ priority: 'desc' }, { entryDate: 'asc' }],
-    include: { inProgress: true },
-  });
-  res.json(ops);
+productionRouter.post('/op-start', async (req: AuthRequest, res) => {
+  const { op_id, stage, box_number, machine } = req.body;
+  if (!op_id || !stage) return res.status(400).json({ error: 'op_id e stage são obrigatórios' });
+  try {
+    await prisma.poInProgress.create({ data: { opId: op_id, stage, boxNumber: box_number, machine } });
+    return res.json({ success: true, started_at: new Date().toISOString() });
+  } catch {
+    return res.status(400).json({ error: 'OP já em progresso' });
+  }
 });
 
-export default router;
+productionRouter.post('/op-stop', async (req: AuthRequest, res) => {
+  const { op_id, stage } = req.body;
+  if (!op_id || !stage) return res.status(400).json({ error: 'op_id e stage são obrigatórios' });
+  const record = await prisma.poInProgress.findUnique({ where: { opId_stage: { opId: op_id, stage } } });
+  if (!record) return res.status(400).json({ error: 'OP não está em progresso' });
+  await prisma.poInProgress.delete({ where: { opId_stage: { opId: op_id, stage } } });
+  return res.json({ success: true, started_at: record.startedAt, stopped_at: new Date().toISOString() });
+});
+
+productionRouter.get('/op-status/:id/:stage', async (req, res) => {
+  const opId = parseInt(req.params.id);
+  const stage = req.params.stage;
+  const record = await prisma.poInProgress.findUnique({ where: { opId_stage: { opId, stage } } });
+  return res.json({ in_progress: !!record, started_at: record?.startedAt ?? null });
+});
