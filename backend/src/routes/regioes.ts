@@ -1,9 +1,18 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
+
 const router = Router();
 router.use(authMiddleware);
-router.get('/', async (_req, res) => res.json(await prisma.regiao.findMany({ orderBy: { name: 'asc' } })));
-router.post('/', async (req, res) => { await prisma.regiao.create({ data: { name: req.body.name } }); res.status(201).json({ success: true }); });
-router.delete('/:id', async (req, res) => { await prisma.regiao.delete({ where: { id: parseInt(req.params.id) } }); res.json({ success: true }); });
+
+router.get('/', async (_req, res: Response) => {
+  const r = await prisma.region.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } });
+  res.json(r);
+});
+
+router.post('/', async (req, res: Response) => {
+  await prisma.region.create({ data: { name: req.body.name } });
+  res.status(201).json({ success: true });
+});
+
 export default router;

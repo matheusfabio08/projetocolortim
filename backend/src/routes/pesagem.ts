@@ -1,40 +1,35 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
+
 const router = Router();
 router.use(authMiddleware);
 
-router.get('/records', async (_req, res) => {
-  const waiting = await prisma.productionOrder.findMany({
-    where: { requiresLab: true, lotNumber: null, parentOpId: null, recipeWeighed: false, pesagem: null },
-    include: { laboratory: true },
-    orderBy: { createdAt: 'desc' },
-  });
-  const inProgress = await prisma.productionOrder.findMany({
-    where: { requiresLab: true, pesagem: { startTime: { not: null }, endTime: null } },
-    include: { pesagem: true },
-  });
-  const completed = await prisma.productionOrder.findMany({
-    where: { requiresLab: true, pesagem: { endTime: { not: null } } },
-    include: { pesagem: true },
-    orderBy: { updatedAt: 'desc' },
-    take: 50,
-  });
-  res.json({ waiting, inProgress, completed });
+router.get('/', async (_req, res: Response) => {
+  const records = await prisma.weighingRecord.findMany({ orderBy: { weighedAt: 'desc' } });
+  res.json(records);
 });
 
-router.post('/start', async (req, res) => {
-  const { op_id, start_time } = req.body;
-  await prisma.poPesagem.create({ data: { opId: op_id, startTime: start_time } });
-  res.json({ success: true });
+router.post('/', async (req, res: Response) => {
+  const { op_number, client, color, weight_in, weight_out, employee_name, notes } = req.body;
+  const record = await prisma.weighingRecord.create({
+    data: {
+      opNumber: op_number, client, color, weightIn: weight_in,
+      weightOut: weight_out, difference: weight_out ? weight_out - weight_in : null,
+      employeeName: employee_name, notes,
+    },
+  });
+  res.status(201).json(record);
 });
 
-router.post('/finish', async (req, res): Promise<void> => {
-  const { op_id, end_time } = req.body;
-  const p = await prisma.poPesagem.findUnique({ where: { opId: op_id } });
-  if (!p) { res.status(404).json({ error: 'Pesagem não encontrada' }); return; }
-  await prisma.poPesagem.update({ where: { opId: op_id }, data: { endTime: end_time } });
-  await prisma.productionOrder.update({ where: { id: op_id }, data: { recipeWeighed: true } });
+router.put('/:id', async (req, res: Response) => {
+  const { weight_out, notes } = req.body;
+  const existing = await prisma.weighingRecord.findUnique({ where: { id: parseInt(req.params.id) } });
+  if (!existing) { res.status(404).json({ error: 'Registro não encontrado' }); return; }
+  await prisma.weighingRecord.update({
+    where: { id: parseInt(req.params.id) },
+    data: { weightOut: weight_out, difference: weight_out - existing.weightIn, notes },
+  });
   res.json({ success: true });
 });
 

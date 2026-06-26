@@ -1,12 +1,12 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
+import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
-import { z } from 'zod';
 
 const router = Router();
 router.use(authMiddleware);
 
-const Schema = z.object({
+const ProductionSchema = z.object({
   po_id: z.number(),
   box_number: z.string(),
   machine: z.string(),
@@ -17,41 +17,29 @@ const Schema = z.object({
   meters_produced: z.number(),
 });
 
-router.post('/', async (req: AuthRequest, res): Promise<void> => {
-  try {
-    const v = Schema.parse(req.body);
-    await prisma.poProduction.create({ data: { opId: v.po_id, boxNumber: v.box_number, machine: v.machine, operator: v.operator, hasAdjustment: v.has_adjustment, startDate: v.start_date, endDate: v.end_date, metersProduced: v.meters_produced } });
-    await prisma.productionOrder.update({ where: { id: v.po_id }, data: { status: 'secadora', currentStage: 'producao' } });
-    await prisma.activityLog.create({ data: { opId: v.po_id, stage: 'producao', action: 'completed', userId: req.user!.id } });
-    res.json({ success: true });
-  } catch (e: any) {
-    if (e.name === 'ZodError') { res.status(400).json({ error: 'Dados inválidos' }); return; }
-    res.status(500).json({ error: 'Erro' });
-  }
-});
+router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
+  const parsed = ProductionSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.flatten() }); return; }
+  const d = parsed.data;
 
-// In-progress
-router.post('/start', async (req, res): Promise<void> => {
-  const { op_id, stage, box_number, machine } = req.body;
-  if (!op_id || !stage) { res.status(400).json({ error: 'op_id e stage obrigatórios' }); return; }
-  try {
-    await prisma.poInProgress.create({ data: { opId: op_id, stage, boxNumber: box_number, machine } });
-    res.json({ success: true, started_at: new Date().toISOString() });
-  } catch { res.status(400).json({ error: 'OP já em progresso' }); }
-});
+  await prisma.poProduction.create({
+    data: {
+      opId: d.po_id, boxNumber: d.box_number, machine: d.machine,
+      operator: d.operator, hasAdjustment: d.has_adjustment,
+      startDate: d.start_date, endDate: d.end_date, metersProduced: d.meters_produced,
+    },
+  });
 
-router.post('/stop', async (req, res): Promise<void> => {
-  const { op_id, stage } = req.body;
-  if (!op_id || !stage) { res.status(400).json({ error: 'op_id e stage obrigatórios' }); return; }
-  const record = await prisma.poInProgress.findUnique({ where: { opId_stage: { opId: op_id, stage } } });
-  if (!record) { res.status(400).json({ error: 'OP não está em progresso' }); return; }
-  await prisma.poInProgress.delete({ where: { opId_stage: { opId: op_id, stage } } });
-  res.json({ success: true, started_at: record.startedAt, stopped_at: new Date().toISOString() });
-});
+  await prisma.productionOrder.update({
+    where: { id: d.po_id },
+    data: { status: 'secadora', currentStage: 'producao' },
+  });
 
-router.get('/status/:id/:stage', async (req, res) => {
-  const record = await prisma.poInProgress.findUnique({ where: { opId_stage: { opId: parseInt(req.params.id), stage: req.params.stage } } });
-  res.json({ in_progress: !!record, started_at: record?.startedAt ?? null });
+  await prisma.activityLog.create({
+    data: { opId: d.po_id, stage: 'producao', action: 'completed', userId: req.user!.id },
+  });
+
+  res.json({ success: true });
 });
 
 export default router;

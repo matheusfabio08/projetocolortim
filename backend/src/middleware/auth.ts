@@ -9,7 +9,6 @@ export interface AuthRequest extends Request {
     name: string;
     email: string;
     role: string;
-    isActive: boolean;
   };
 }
 
@@ -19,29 +18,33 @@ export const authMiddleware = async (
   next: NextFunction
 ): Promise<void> => {
   const authHeader = req.headers.authorization;
+
   if (!authHeader?.startsWith('Bearer ')) {
     res.status(401).json({ error: 'Token não fornecido' });
     return;
   }
 
-  const token = authHeader.slice(7);
+  const token = authHeader.split(' ')[1];
 
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET!) as any;
 
-    // Valida sessão no banco (invalida se logout foi feito)
-    const session = await prisma.session.findUnique({
-      where: { token },
-      include: { user: true },
+    // Verify session still exists in DB (handles logout/revocation)
+    const session = await prisma.userSession.findFirst({
+      where: {
+        token,
+        userId: payload.id,
+        expiresAt: { gt: new Date() },
+      },
+      include: {
+        user: {
+          select: { id: true, username: true, name: true, email: true, role: true, isActive: true },
+        },
+      },
     });
 
-    if (!session || session.expiresAt < new Date()) {
-      res.status(401).json({ error: 'Sessão expirada ou inválida' });
-      return;
-    }
-
-    if (!session.user.isActive) {
-      res.status(403).json({ error: 'Usuário desativado' });
+    if (!session || !session.user.isActive) {
+      res.status(401).json({ error: 'Sessão inválida ou expirada' });
       return;
     }
 
@@ -51,7 +54,6 @@ export const authMiddleware = async (
       name: session.user.name,
       email: session.user.email,
       role: session.user.role,
-      isActive: session.user.isActive,
     };
 
     next();

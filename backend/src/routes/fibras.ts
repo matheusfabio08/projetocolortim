@@ -1,9 +1,24 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
+
 const router = Router();
 router.use(authMiddleware);
-router.get('/', async (_req, res) => res.json(await prisma.fiber.findMany({ orderBy: { name: 'asc' } })));
-router.post('/', async (req, res) => { await prisma.fiber.create({ data: { name: req.body.name } }); res.status(201).json({ success: true }); });
-router.delete('/:id', async (req, res) => { await prisma.fiber.delete({ where: { id: parseInt(req.params.id) } }); res.json({ success: true }); });
+
+router.get('/', async (_req, res: Response) => {
+  const fibers = await prisma.fiber.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } });
+  res.json(fibers);
+});
+
+router.post('/', async (req, res: Response) => {
+  const { name, description } = req.body;
+  await prisma.fiber.create({ data: { name, description } });
+  res.status(201).json({ success: true });
+});
+
+router.put('/:id', async (req, res: Response) => {
+  await prisma.fiber.update({ where: { id: parseInt(req.params.id) }, data: req.body });
+  res.json({ success: true });
+});
+
 export default router;
