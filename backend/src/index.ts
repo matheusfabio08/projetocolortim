@@ -1,103 +1,101 @@
-import 'dotenv/config';
-import express from 'express';
-import helmet from 'helmet';
-import cors from 'cors';
-import compression from 'compression';
-import rateLimit from 'express-rate-limit';
-
-import authRoutes from './routes/auth';
-import productionOrdersRoutes from './routes/productionOrders';
-import preparationRoutes from './routes/preparation';
-import productionRoutes from './routes/production';
-import dryerRoutes from './routes/dryer';
-import untanglingRoutes from './routes/untangling';
-import rollingRoutes from './routes/rolling';
-import qualityRoutes from './routes/quality';
-import laboratoryRoutes from './routes/laboratory';
-import boxRoutes from './routes/box';
-import adminRoutes from './routes/admin';
-import employeesRoutes from './routes/employees';
-import fibrasRoutes from './routes/fibras';
-import pesagemRoutes from './routes/pesagem';
-import fabricQualityRoutes from './routes/fabricQuality';
-import listaSaidaRoutes from './routes/listaSaida';
-import pcpRoutes from './routes/pcp';
-import dashboardRoutes from './routes/dashboard';
+import express from "express";
+import helmet from "helmet";
+import cors from "cors";
+import rateLimit from "express-rate-limit";
+import { authRouter } from "./routes/auth";
+import { productionOrdersRouter } from "./routes/productionOrders";
+import { preparationRouter } from "./routes/preparation";
+import { productionRouter } from "./routes/production";
+import { dryerRouter } from "./routes/dryer";
+import { untanglingRouter } from "./routes/untangling";
+import { rollingRouter } from "./routes/rolling";
+import { qualityRouter } from "./routes/quality";
+import { laboratoryRouter } from "./routes/laboratory";
+import { boxRouter } from "./routes/box";
+import { pcpRouter } from "./routes/pcp";
+import { adminRouter } from "./routes/admin";
+import { employeesRouter } from "./routes/employees";
+import { fibrasRouter } from "./routes/fibras";
+import { transportadorasRouter } from "./routes/transportadoras";
+import { regioesRouter } from "./routes/regioes";
+import { listaSaidaRouter } from "./routes/listaSaida";
+import { pesagemRouter } from "./routes/pesagem";
+import { fabricQualityRouter } from "./routes/fabricQuality";
+import { dashboardRouter } from "./routes/dashboard";
 
 const app = express();
-const PORT = parseInt(process.env.PORT || '3001', 10);
+const PORT = process.env.PORT || 3001;
 
-// Security
-app.use(helmet({
-  crossOriginEmbedderPolicy: false,
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", 'data:', 'https:'],
-    },
-  },
-}));
+// Security headers
+app.use(helmet());
 
 // CORS
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: process.env.FRONTEND_URL || "http://localhost:5173",
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
-// Compression
-app.use(compression());
-
-// Body parsing
-app.use(express.json({ limit: '10mb' }));
+// Body parser
+app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-// Global rate limit
+// Global rate limiter
 const globalLimiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),
-  max: parseInt(process.env.RATE_LIMIT_MAX || '500', 10),
-  message: { error: 'Muitas requisições. Tente novamente mais tarde.' },
+  windowMs: 15 * 60 * 1000,
+  max: 500,
   standardHeaders: true,
   legacyHeaders: false,
+  message: { error: "Muitas requisições. Tente novamente em alguns minutos." },
 });
-app.use(globalLimiter);
+app.use("/api", globalLimiter);
+
+// Auth rate limiter (stricter)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Muitas tentativas de login. Aguarde 15 minutos." },
+});
+app.use("/api/auth/login", authLimiter);
 
 // Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/production-orders', productionOrdersRoutes);
-app.use('/api/preparation', preparationRoutes);
-app.use('/api/production', productionRoutes);
-app.use('/api/dryer', dryerRoutes);
-app.use('/api/untangling', untanglingRoutes);
-app.use('/api/rolling', rollingRoutes);
-app.use('/api/quality', qualityRoutes);
-app.use('/api/laboratory', laboratoryRoutes);
-app.use('/api', boxRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/employees', employeesRoutes);
-app.use('/api/fibras', fibrasRoutes);
-app.use('/api/pesagem', pesagemRoutes);
-app.use('/api/fabric-quality', fabricQualityRoutes);
-app.use('/api/lista-saida', listaSaidaRoutes);
-app.use('/api/pcp', pcpRoutes);
-app.use('/api/dashboard', dashboardRoutes);
+app.use("/api/auth", authRouter);
+app.use("/api/dashboard", dashboardRouter);
+app.use("/api/production-orders", productionOrdersRouter);
+app.use("/api/preparation", preparationRouter);
+app.use("/api/production", productionRouter);
+app.use("/api/dryer", dryerRouter);
+app.use("/api/untangling", untanglingRouter);
+app.use("/api/rolling", rollingRouter);
+app.use("/api/quality", qualityRouter);
+app.use("/api/laboratory", laboratoryRouter);
+app.use("/api/box4", boxRouter("box4"));
+app.use("/api/box5", boxRouter("box5"));
+app.use("/api/box6", boxRouter("box6"));
+app.use("/api/pcp", pcpRouter);
+app.use("/api/admin", adminRouter);
+app.use("/api/employees", employeesRouter);
+app.use("/api/fibras", fibrasRouter);
+app.use("/api/transportadoras", transportadorasRouter);
+app.use("/api/regioes", regioesRouter);
+app.use("/api/lista-saida", listaSaidaRouter);
+app.use("/api/pesagem", pesagemRouter);
+app.use("/api/fabric-quality", fabricQualityRouter);
 
 // Health check
-app.get('/health', (_, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
+app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
-// Error handler
-app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+// Global error handler
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);
-  res.status(500).json({ error: 'Erro interno do servidor' });
+  res.status(err.status || 500).json({ error: err.message || "Erro interno do servidor" });
 });
 
 app.listen(PORT, () => {
-  console.log(`\n🚀 Colortim ERP Backend rodando na porta ${PORT}`);
-  console.log(`   Ambiente: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`   CORS: ${process.env.CORS_ORIGIN || 'http://localhost:5173'}\n`);
+  console.log(`Colortim API running on port ${PORT}`);
 });
 
 export default app;
