@@ -10,11 +10,26 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
+    port: 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://localhost:4000',
         changeOrigin: true,
+        rewrite: path => path.replace(/^\/api/, ''),
+      },
+    },
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor:  ['react', 'react-dom'],
+          router:  ['react-router-dom'],
+          query:   ['@tanstack/react-query'],
+          ui:      ['lucide-react', 'sonner', 'date-fns'],
+        },
       },
     },
   },

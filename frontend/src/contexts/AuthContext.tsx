@@ -1,72 +1,43 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, ReactNode } from 'react'
 import { api } from '@/lib/api'
 
-export interface User {
+interface User {
   id: string
-  username: string
   name: string
-  email: string
+  username: string
   role: string
 }
 
 interface AuthContextType {
   user: User | null
-  token: string | null
-  isLoading: boolean
-  isAuthenticated: boolean
   login: (username: string, password: string) => Promise<void>
-  logout: () => Promise<void>
-  hasRole: (...roles: string[]) => boolean
+  logout: () => void
+  isAuthenticated: boolean
 }
 
-const AuthContext = createContext<AuthContextType | null>(null)
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser]     = useState<User | null>(null)
-  const [token, setToken]   = useState<string | null>(null)
-  const [isLoading, setLoading] = useState(true)
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const stored = sessionStorage.getItem('user')
+  const [user, setUser] = useState<User | null>(stored ? JSON.parse(stored) : null)
 
-  // Restaura sessão ao iniciar
-  useEffect(() => {
-    const savedToken = localStorage.getItem('colortim_token')
-    const savedUser  = localStorage.getItem('colortim_user')
-    if (savedToken && savedUser) {
-      try {
-        setToken(savedToken)
-        setUser(JSON.parse(savedUser))
-      } catch { /* ignore */ }
-    }
-    setLoading(false)
-  }, [])
-
-  const login = useCallback(async (username: string, password: string) => {
+  const login = async (username: string, password: string) => {
     const { data } = await api.post('/auth/login', { username, password })
-    localStorage.setItem('colortim_token', data.token)
-    localStorage.setItem('colortim_user', JSON.stringify(data.user))
-    setToken(data.token)
+    sessionStorage.setItem('token', data.token)
+    sessionStorage.setItem('user', JSON.stringify(data.user))
     setUser(data.user)
-  }, [])
+  }
 
-  const logout = useCallback(async () => {
-    try { await api.post('/auth/logout') } catch { /* ignore */ }
-    localStorage.removeItem('colortim_token')
-    localStorage.removeItem('colortim_user')
-    setToken(null)
+  const logout = async () => {
+    try { await api.post('/auth/logout') } catch {}
+    sessionStorage.removeItem('token')
+    sessionStorage.removeItem('user')
     setUser(null)
-  }, [])
-
-  const hasRole = useCallback((...roles: string[]) => {
-    if (!user) return false
-    if (user.role === 'Admin') return true
-    return roles.includes(user.role)
-  }, [user])
+    window.location.href = '/login'
+  }
 
   return (
-    <AuthContext.Provider value={{
-      user, token, isLoading,
-      isAuthenticated: !!user && !!token,
-      login, logout, hasRole,
-    }}>
+    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   )
@@ -74,6 +45,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used inside AuthProvider')
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
   return ctx
 }
