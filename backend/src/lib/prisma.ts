@@ -5,10 +5,10 @@ declare global {
   var __prisma: PrismaClient | undefined;
 }
 
-export const prisma: PrismaClient =
+export const prisma =
   global.__prisma ??
   new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
   });
 
 if (process.env.NODE_ENV !== 'production') {

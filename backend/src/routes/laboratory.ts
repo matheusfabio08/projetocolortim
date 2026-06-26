@@ -4,7 +4,6 @@ import { prisma } from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 
 const router = Router();
-router.use(authMiddleware);
 
 const Schema = z.object({
   po_id: z.number(),
@@ -17,7 +16,7 @@ const Schema = z.object({
   end_time: z.string(),
 });
 
-router.get('/records', async (_req, res: Response) => {
+router.get('/records', authMiddleware, async (_req: AuthRequest, res: Response): Promise<void> => {
   const records = await prisma.productionOrder.findMany({
     where: { requiresLab: true, lotNumber: null, parentOpId: null },
     include: { laboratory: true },
@@ -26,29 +25,23 @@ router.get('/records', async (_req, res: Response) => {
   res.json(records);
 });
 
-router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
-  const parsed = Schema.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ error: parsed.error.flatten() }); return; }
-  const d = parsed.data;
+router.post('/', authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {
+  const v = Schema.safeParse(req.body);
+  if (!v.success) { res.status(400).json({ error: v.error.flatten() }); return; }
+  const d = v.data;
 
-  await prisma.poLaboratory.create({
-    data: {
-      opId: d.po_id, numBatches: d.num_batches, isRecipeReady: d.is_recipe_ready,
-      recipeOriginDate: d.recipe_origin_date, description: d.description,
-      isApproved: d.is_approved, startTime: d.start_time, endTime: d.end_time,
-    },
+  await prisma.poLaboratory.upsert({
+    where: { opId: d.po_id },
+    create: { opId: d.po_id, numBatches: d.num_batches, isRecipeReady: d.is_recipe_ready, recipeOriginDate: d.recipe_origin_date, description: d.description, isApproved: d.is_approved, startTime: d.start_time, endTime: d.end_time },
+    update: { numBatches: d.num_batches, isRecipeReady: d.is_recipe_ready, recipeOriginDate: d.recipe_origin_date, description: d.description, isApproved: d.is_approved, startTime: d.start_time, endTime: d.end_time },
   });
 
-  await prisma.activityLog.create({
-    data: { opId: d.po_id, stage: 'laboratorio', action: d.is_approved ? 'approved' : 'processed', userId: req.user!.id },
-  });
-
+  await prisma.activityLog.create({ data: { opId: d.po_id, stage: 'laboratorio', action: d.is_approved ? 'approved' : 'processed', userId: req.user!.id } });
   res.json({ success: true });
 });
 
-router.delete('/:id', async (_req, res: Response) => {
-  const id = parseInt(_req.params.id);
-  await prisma.poLaboratory.delete({ where: { id } });
+router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {
+  await prisma.poLaboratory.delete({ where: { id: parseInt(req.params.id) } });
   res.json({ success: true });
 });
 

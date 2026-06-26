@@ -3,52 +3,55 @@ import bcrypt from 'bcryptjs';
 import { prisma } from './lib/prisma';
 
 async function main() {
-  console.log('🌱 Iniciando seed...');
+  console.log('🌱 Iniciando seed do banco...');
 
-  // Admin user
+  // Admin
   const adminHash = await bcrypt.hash('admin123', 12);
   await prisma.user.upsert({
     where: { username: 'admin' },
     update: {},
     create: {
-      username: 'admin', passwordHash: adminHash, name: 'Administrador',
-      email: 'admin@colortim.com.br', role: 'Admin',
+      username: 'admin',
+      passwordHash: adminHash,
+      name: 'Administrador',
+      email: 'admin@colortim.com.br',
+      role: 'Admin',
     },
   });
 
-  // Fibras
-  const fibras = ['Poliéster', 'Algodão', 'Viscose', 'Nylon', 'Elastano', 'Modal', 'Linho'];
-  for (const name of fibras) {
-    await prisma.fiber.upsert({ where: { name }, update: {}, create: { name } });
-  }
+  // Fibras iniciais
+  const fibers = [
+    { name: 'Algodão', code: 'ALG' },
+    { name: 'Poliéster', code: 'POL' },
+    { name: 'Viscose', code: 'VIS' },
+    { name: 'Nylon', code: 'NYL' },
+    { name: 'Elastano', code: 'ELA' },
+  ];
 
-  // Regiões
-  const regioes = ['Jaraguá do Sul', 'Brusque', 'Gaspar'];
-  for (const name of regioes) {
-    await prisma.region.upsert({ where: { name }, update: {}, create: { name } });
-  }
-
-  // Transportadoras
-  const transportadoras = ['Transportadora A', 'Transportadora B', 'Motoboy'];
-  for (const name of transportadoras) {
-    const exists = await prisma.transporter.findFirst({ where: { name } });
-    if (!exists) await prisma.transporter.create({ data: { name } });
+  for (const fiber of fibers) {
+    await prisma.fiber.upsert({
+      where: { code: fiber.code },
+      update: {},
+      create: fiber,
+    });
   }
 
   // Funcionários de exemplo
   const employees = [
     { name: 'João Silva', sector: 'Preparação' },
-    { name: 'Maria Souza', sector: 'Produção' },
+    { name: 'Maria Santos', sector: 'Produção' },
     { name: 'Carlos Oliveira', sector: 'Qualidade' },
-    { name: 'Ana Santos', sector: 'Laboratório' },
+    { name: 'Ana Souza', sector: 'Laboratório' },
+    { name: 'Pedro Costa', sector: 'Enrolagem' },
   ];
+
   for (const emp of employees) {
     const exists = await prisma.employee.findFirst({ where: { name: emp.name } });
     if (!exists) await prisma.employee.create({ data: emp });
   }
 
   console.log('✅ Seed concluído!');
-  console.log('   Login admin: usuario=admin / senha=admin123');
+  console.log('   Login: admin / admin123');
 }
 
 main().catch(console.error).finally(() => prisma.$disconnect());

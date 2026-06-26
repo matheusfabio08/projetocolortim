@@ -1,54 +1,60 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { z } from 'zod';
+import rateLimit from 'express-rate-limit';
 import { prisma } from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
-const loginSchema = z.object({
-  username: z.string().min(1),
-  password: z.string().min(1),
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: parseInt(process.env.LOGIN_RATE_LIMIT_MAX || '20', 10),
+  message: { error: 'Muitas tentativas de login. Tente novamente em 15 minutos.' },
+  skipSuccessfulRequests: true,
 });
 
-// POST /api/auth/login
-router.post('/login', async (req: Request, res: Response): Promise<void> => {
-  const parsed = loginSchema.safeParse(req.body);
-  if (!parsed.success) {
+router.post('/login', loginLimiter, async (req: Request, res: Response): Promise<void> => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
     res.status(400).json({ error: 'Usuário e senha são obrigatórios' });
     return;
   }
 
-  const { username, password } = parsed.data;
+  // Tempo constante para prevenir enumeração de usuários
+  const DUMMY_HASH = '$2a$12$dummyhashfornonexistentuser000000000000000000000000000';
 
-  // Always hash to prevent timing attacks
-  const user = await prisma.user.findFirst({
-    where: { username, isActive: true },
-  });
+  const user = await prisma.user.findUnique({ where: { username } }).catch(() => null);
 
-  const dummyHash = '$2a$12$invalidhashfortimingatk';
-  const hashToVerify = user?.passwordHash ?? dummyHash;
+  const hashToCompare = user?.passwordHash ?? DUMMY_HASH;
+  const isValid = await bcrypt.compare(password, hashToCompare);
 
-  const isValid = await bcrypt.compare(password, hashToVerify);
-
-  if (!user || !isValid) {
+  if (!user || !isValid || !user.isActive) {
     res.status(401).json({ error: 'Usuário ou senha inválidos' });
     return;
   }
 
-  const expiresIn = process.env.JWT_EXPIRES_IN || '8h';
-  const token = jwt.sign(
-    { id: user.id, username: user.username, role: user.role },
-    process.env.JWT_SECRET!,
-    { expiresIn } as any
-  );
-
-  const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000);
-
-  await prisma.userSession.create({
-    data: { userId: user.id, token, expiresAt },
+  // Limpa sessões expiradas do usuário
+  await prisma.userSession.deleteMany({
+    where: { userId: user.id, expiresAt: { lt: new Date() } },
   });
+
+  const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000); // 8h
+
+  const session = await prisma.userSession.create({
+    data: {
+      userId: user.id,
+      token: require('crypto').randomBytes(32).toString('hex'),
+      expiresAt,
+    },
+  });
+
+  const token = jwt.sign(
+    { userId: user.id, sessionId: session.id },
+    process.env.JWT_SECRET!,
+    { expiresIn: '8h' }
+  );
 
   res.json({
     token,
@@ -62,16 +68,17 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
   });
 });
 
-// GET /api/auth/me
 router.get('/me', authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {
   res.json(req.user);
 });
 
-// POST /api/auth/logout
 router.post('/logout', authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {
   const token = req.headers.authorization?.split(' ')[1];
   if (token) {
-    await prisma.userSession.deleteMany({ where: { token } });
+    const decoded = jwt.decode(token) as { sessionId?: string } | null;
+    if (decoded?.sessionId) {
+      await prisma.userSession.deleteMany({ where: { id: decoded.sessionId } }).catch(() => {});
+    }
   }
   res.json({ success: true });
 });

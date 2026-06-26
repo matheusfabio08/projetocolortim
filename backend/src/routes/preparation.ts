@@ -4,7 +4,6 @@ import { prisma } from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 
 const router = Router();
-router.use(authMiddleware);
 
 const PreparationSchema = z.object({
   po_id: z.number(),
@@ -16,7 +15,7 @@ const PreparationSchema = z.object({
   destination_box: z.string(),
 });
 
-const BatchPreparationSchema = z.object({
+const BatchSchema = z.object({
   color: z.string(),
   total_weight: z.number(),
   destination_box: z.string(),
@@ -27,30 +26,25 @@ const BatchPreparationSchema = z.object({
   ops: z.array(z.object({ op_id: z.number(), meters: z.number() })),
 });
 
-const nextStatus = (box: string) => {
-  if (box === 'Box 4') return 'box4';
-  if (box === 'Box 5') return 'box5';
-  if (box === 'Box 6') return 'box6';
+function getNextStatus(destinationBox: string): string {
+  if (destinationBox === 'Box 4') return 'box4';
+  if (destinationBox === 'Box 5') return 'box5';
+  if (destinationBox === 'Box 6') return 'box6';
   return 'producao';
-};
+}
 
-// POST /api/preparation
-router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
-  const parsed = PreparationSchema.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ error: parsed.error.flatten() }); return; }
-  const d = parsed.data;
+router.post('/', authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {
+  const v = PreparationSchema.safeParse(req.body);
+  if (!v.success) { res.status(400).json({ error: v.error.flatten() }); return; }
+  const d = v.data;
 
   await prisma.poPreparation.create({
-    data: {
-      opId: d.po_id, employeeIds: d.employee_meters, startTime: d.start_time,
-      endTime: d.end_time, splices: d.splices, totalWeight: d.total_weight,
-      destinationBox: d.destination_box,
-    },
+    data: { opId: d.po_id, employeeIds: d.employee_meters, startTime: d.start_time, endTime: d.end_time, splices: d.splices, totalWeight: d.total_weight, destinationBox: d.destination_box },
   });
 
   await prisma.productionOrder.update({
     where: { id: d.po_id },
-    data: { status: nextStatus(d.destination_box), currentStage: 'preparacao' },
+    data: { status: getNextStatus(d.destination_box), currentStage: 'preparacao' },
   });
 
   await prisma.activityLog.create({
@@ -60,58 +54,44 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
   res.json({ success: true });
 });
 
-// POST /api/preparation/batch
-router.post('/batch', async (req: AuthRequest, res: Response): Promise<void> => {
-  const parsed = BatchPreparationSchema.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ error: parsed.error.flatten() }); return; }
-  const d = parsed.data;
+router.post('/batch', authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {
+  const v = BatchSchema.safeParse(req.body);
+  if (!v.success) { res.status(400).json({ error: v.error.flatten() }); return; }
+  const d = v.data;
 
-  const lastBatch = await prisma.preparationBatch.findFirst({ orderBy: { id: 'desc' }, select: { batchNumber: true } });
-  const num = lastBatch ? parseInt(lastBatch.batchNumber.split('-')[1]) + 1 : 1;
-  const batchNumber = `LOTE-${String(num).padStart(3, '0')}`;
+  const lastBatch = await prisma.preparationBatch.findFirst({ orderBy: { id: 'desc' } });
+  const batchNumber = lastBatch
+    ? `LOTE-${String(parseInt(lastBatch.batchNumber.split('-')[1]) + 1).padStart(3, '0')}`
+    : 'LOTE-001';
 
   const batch = await prisma.preparationBatch.create({
-    data: {
-      batchNumber, color: d.color, totalWeight: d.total_weight,
-      destinationBox: d.destination_box, employeeIds: d.employee_meters,
-      splices: d.splices, startTime: d.start_time, endTime: d.end_time,
-    },
+    data: { batchNumber, color: d.color, totalWeight: d.total_weight, destinationBox: d.destination_box, employeeIds: d.employee_meters, splices: d.splices, startTime: d.start_time, endTime: d.end_time },
   });
 
   for (const op of d.ops) {
     await prisma.batchOp.create({ data: { batchId: batch.id, opId: op.op_id, metersInBatch: op.meters } });
     await prisma.poPreparation.create({
-      data: {
-        opId: op.op_id, employeeIds: d.employee_meters, startTime: d.start_time,
-        endTime: d.end_time, splices: d.splices, totalWeight: op.meters,
-        destinationBox: d.destination_box,
-      },
+      data: { opId: op.op_id, employeeIds: d.employee_meters, startTime: d.start_time, endTime: d.end_time, splices: d.splices, totalWeight: op.meters, destinationBox: d.destination_box },
     });
-    await prisma.productionOrder.update({
-      where: { id: op.op_id },
-      data: { status: nextStatus(d.destination_box), currentStage: 'preparacao' },
-    });
-    await prisma.activityLog.create({
-      data: { opId: op.op_id, stage: 'preparacao', action: 'completed_in_batch', userId: req.user!.id, details: `Lote ${batchNumber}` },
-    });
+    await prisma.productionOrder.update({ where: { id: op.op_id }, data: { status: getNextStatus(d.destination_box), currentStage: 'preparacao' } });
+    await prisma.activityLog.create({ data: { opId: op.op_id, stage: 'preparacao', action: 'completed_in_batch', userId: req.user!.id, details: `Lote ${batchNumber}` } });
   }
 
   res.json({ success: true, batch_number: batchNumber });
 });
 
-// GET /api/preparation/available-for-batch
-router.get('/available-for-batch', async (req, res: Response) => {
-  const color = req.query.color as string;
+router.get('/available-for-batch', authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {
+  const { color } = req.query;
   if (!color) { res.status(400).json({ error: 'Parâmetro color obrigatório' }); return; }
+
   const ops = await prisma.productionOrder.findMany({
-    where: { color, status: 'preparacao' },
+    where: { color: String(color), status: 'preparacao' },
     orderBy: { entryDate: 'asc' },
   });
   res.json(ops);
 });
 
-// POST /api/preparation/create-lots
-router.post('/create-lots', async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/create-lots', authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {
   const { parent_op_id, num_lots, lot_meters } = req.body;
   if (!parent_op_id || !num_lots || !lot_meters || lot_meters.length !== num_lots) {
     res.status(400).json({ error: 'Parâmetros inválidos' }); return;
@@ -122,27 +102,34 @@ router.post('/create-lots', async (req: AuthRequest, res: Response): Promise<voi
 
   const createdLots = [];
   for (let i = 0; i < num_lots; i++) {
-    const op = await prisma.productionOrder.create({
+    const opNumber = `${parent.opNumber}-L${i + 1}`;
+    const lot = await prisma.productionOrder.create({
       data: {
-        sheetId: parent.sheetId, opNumber: `${parent.opNumber}-L${i + 1}`,
-        client: parent.client, color: parent.color, orderNumber: parent.orderNumber,
-        entryDate: parent.entryDate, expectedDate: parent.expectedDate,
-        material: parent.material, quantity: lot_meters[i], unit: parent.unit,
-        requiresLab: parent.requiresLab, status: 'preparacao', currentStage: 'preparacao',
-        responsibleUserId: req.user!.id, description: parent.description,
-        lotNumber: i + 1, parentOpId: parent_op_id, lotMeters: lot_meters[i],
+        sheetId: parent.sheetId,
+        opNumber,
+        client: parent.client,
+        color: parent.color,
+        orderNumber: parent.orderNumber,
+        entryDate: parent.entryDate,
+        expectedDate: parent.expectedDate,
+        material: parent.material,
+        quantity: lot_meters[i],
+        unit: parent.unit,
+        requiresLab: parent.requiresLab,
+        status: 'preparacao',
+        currentStage: 'preparacao',
+        responsibleUserId: req.user!.id,
+        description: parent.description,
+        lotNumber: i + 1,
+        parentOpId: parent_op_id,
+        lotMeters: lot_meters[i],
       },
     });
-    createdLots.push({ id: op.id, op_number: op.opNumber, lot_number: i + 1 });
-    await prisma.activityLog.create({
-      data: { opId: op.id, stage: 'preparacao', action: 'lot_created', userId: req.user!.id, details: `Lote ${i + 1} de ${num_lots}` },
-    });
+    await prisma.activityLog.create({ data: { opId: lot.id, stage: 'preparacao', action: 'lot_created', userId: req.user!.id, details: `Lote ${i + 1} de ${num_lots} criado da OP ${parent.opNumber}` } });
+    createdLots.push({ id: lot.id, op_number: lot.opNumber, lot_number: i + 1 });
   }
 
-  await prisma.productionOrder.update({
-    where: { id: parent_op_id },
-    data: { status: 'concluido', isCompleted: true },
-  });
+  await prisma.productionOrder.update({ where: { id: parent_op_id }, data: { status: 'concluido', isCompleted: true } });
 
   res.json({ success: true, lots: createdLots });
 });

@@ -4,7 +4,6 @@ import { prisma } from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 
 const router = Router();
-router.use(authMiddleware);
 
 const Schema = z.object({
   po_id: z.number(),
@@ -13,23 +12,26 @@ const Schema = z.object({
   discrepancy: z.string().optional(),
 });
 
-router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
-  const parsed = Schema.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ error: parsed.error.flatten() }); return; }
-  const d = parsed.data;
+router.post('/', authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {
+  const v = Schema.safeParse(req.body);
+  if (!v.success) { res.status(400).json({ error: v.error.flatten() }); return; }
+  const d = v.data;
 
   await prisma.poQuality.create({
     data: { opId: d.po_id, rollsSent: d.rolls_sent, metersPerRoll: d.meters_per_roll, discrepancy: d.discrepancy },
   });
-
-  await prisma.productionOrder.update({
-    where: { id: d.po_id },
-    data: { status: 'concluido', currentStage: 'qualidade', isCompleted: true },
-  });
-
+  await prisma.productionOrder.update({ where: { id: d.po_id }, data: { status: 'concluido', currentStage: 'qualidade', isCompleted: true } });
   await prisma.activityLog.create({ data: { opId: d.po_id, stage: 'qualidade', action: 'completed', userId: req.user!.id } });
-
   res.json({ success: true });
+});
+
+router.get('/', authMiddleware, async (_req: AuthRequest, res: Response): Promise<void> => {
+  const ops = await prisma.productionOrder.findMany({
+    where: { status: 'qualidade', isCompleted: false },
+    orderBy: { entryDate: 'asc' },
+    include: { inProgress: true },
+  });
+  res.json(ops);
 });
 
 export default router;
