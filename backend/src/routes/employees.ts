@@ -1,46 +1,39 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { z } from 'zod';
-import { prisma } from '../lib/prisma.js';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { prisma } from '../lib/prisma';
 
 const router = Router();
 
-router.get('/', authMiddleware, async (req, res): Promise<void> => {
-  try {
-    const { sector } = req.query as { sector?: string };
-    const where: any = { isActive: true };
-    if (sector && sector !== 'Todos') where.sector = sector;
-    const employees = await prisma.employee.findMany({ where, orderBy: [{ sector: 'asc' }, { name: 'asc' }] });
-    res.json(employees);
-  } catch { res.status(500).json({ error: 'Erro ao buscar funcionários' }); }
+const EmployeeSchema = z.object({
+  name: z.string().min(1),
+  sector: z.string().min(1),
 });
 
-router.post('/', authMiddleware, async (req, res): Promise<void> => {
-  try {
-    const { name, sector } = z.object({ name: z.string().min(1), sector: z.string() }).parse(req.body);
-    await prisma.employee.create({ data: { name, sector } });
-    res.status(201).json({ success: true });
-  } catch (error: any) {
-    if (error.name === 'ZodError') { res.status(400).json({ error: 'Dados inválidos' }); return; }
-    res.status(500).json({ error: 'Erro ao criar funcionário' });
-  }
+router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { sector } = req.query;
+  const where: Record<string, unknown> = { isActive: true };
+  if (sector && sector !== 'Todos') where.sector = { in: [sector, 'Todos'] };
+
+  const employees = await prisma.employee.findMany({ where, orderBy: [{ sector: 'asc' }, { name: 'asc' }] });
+  res.json(employees);
 });
 
-router.put('/:id', authMiddleware, async (req, res): Promise<void> => {
-  try {
-    const id = parseInt(req.params.id);
-    const { name, sector, is_active } = req.body;
-    await prisma.employee.update({ where: { id }, data: { name, sector, isActive: is_active } });
-    res.json({ success: true });
-  } catch { res.status(500).json({ error: 'Erro ao atualizar funcionário' }); }
+router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const v = EmployeeSchema.parse(req.body);
+  await prisma.employee.create({ data: { name: v.name, sector: v.sector } });
+  res.status(201).json({ success: true });
 });
 
-router.delete('/:id', authMiddleware, async (req, res): Promise<void> => {
-  try {
-    const id = parseInt(req.params.id);
-    await prisma.employee.delete({ where: { id } });
-    res.json({ success: true });
-  } catch { res.status(500).json({ error: 'Erro ao excluir funcionário' }); }
+router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { name, sector, is_active } = req.body;
+  await prisma.employee.update({ where: { id: parseInt(req.params.id) }, data: { name, sector, isActive: is_active } });
+  res.json({ success: true });
+});
+
+router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  await prisma.employee.delete({ where: { id: parseInt(req.params.id) } });
+  res.json({ success: true });
 });
 
 export default router;

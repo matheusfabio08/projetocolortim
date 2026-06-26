@@ -1,22 +1,33 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { z } from 'zod';
-import { prisma } from '../lib/prisma.js';
-import { authMiddleware, AuthRequest } from '../middleware/auth.js';
+import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { prisma } from '../lib/prisma';
 
 const router = Router();
 
-router.post('/', authMiddleware, async (req: AuthRequest, res): Promise<void> => {
-  try {
-    const { po_id, destination } = z.object({ po_id: z.number(), destination: z.string() }).parse(req.body);
-    const user = req.user!;
-    await prisma.poDryer.create({ data: { opId: po_id, destination } });
-    await prisma.productionOrder.update({ where: { id: po_id }, data: { status: destination, currentStage: 'secadora' } });
-    await prisma.activityLog.create({ data: { opId: po_id, stage: 'secadora', action: 'completed', userId: user.id } });
-    res.json({ success: true });
-  } catch (error: any) {
-    if (error.name === 'ZodError') { res.status(400).json({ error: 'Dados inválidos' }); return; }
-    res.status(500).json({ error: 'Erro na secadora' });
-  }
+const DryerSchema = z.object({
+  po_id: z.number(),
+  destination: z.string(),
+});
+
+router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const v = DryerSchema.parse(req.body);
+
+  await prisma.poDryer.create({ data: { opId: v.po_id, destination: v.destination } });
+  await prisma.productionOrder.update({ where: { id: v.po_id }, data: { status: v.destination, currentStage: 'secadora' } });
+  await prisma.activityLog.create({ data: { opId: v.po_id, stage: 'secadora', action: 'completed', userId: req.user!.id } });
+
+  res.json({ success: true });
+});
+
+router.get('/records', authMiddleware, async (_req: AuthRequest, res: Response) => {
+  const ops = await prisma.productionOrder.findMany({
+    where: { status: 'secadora', isCompleted: false },
+    orderBy: { entryDate: 'asc' },
+    include: { inProgress: true },
+  });
+
+  res.json({ waiting: ops.filter(op => op.inProgress.length === 0), inProgress: ops.filter(op => op.inProgress.length > 0) });
 });
 
 export default router;

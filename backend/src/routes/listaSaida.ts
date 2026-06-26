@@ -1,45 +1,38 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { z } from 'zod';
-import { prisma } from '../lib/prisma.js';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { prisma } from '../lib/prisma';
 
 const router = Router();
 
-router.get('/', authMiddleware, async (_req, res): Promise<void> => {
-  try {
-    const items = await prisma.listaSaida.findMany({ orderBy: { createdAt: 'desc' } });
-    res.json(items);
-  } catch { res.status(500).json({ error: 'Erro ao buscar lista de saída' }); }
+const ListaSaidaSchema = z.object({
+  op_number: z.string().min(1),
+  client: z.string().min(1),
+  color: z.string().min(1),
+  material: z.string().min(1),
+  quantity: z.number().positive(),
+  unit: z.string().default('metros'),
+  transportadora_id: z.number().optional().nullable(),
+  notes: z.string().optional(),
+  exit_date: z.string().min(1),
 });
 
-router.post('/', authMiddleware, async (req, res): Promise<void> => {
-  try {
-    const data = z.object({
-      op_number: z.string(), client: z.string(), color: z.string(),
-      quantity: z.number(), unit: z.string(),
-      carrier_id: z.number().optional(), carrier_name: z.string().optional(),
-      exit_date: z.string(), observations: z.string().optional(),
-    }).parse(req.body);
-    const item = await prisma.listaSaida.create({
-      data: {
-        opNumber: data.op_number, client: data.client, color: data.color,
-        quantity: data.quantity, unit: data.unit, carrierId: data.carrier_id,
-        carrierName: data.carrier_name, exitDate: data.exit_date, observations: data.observations,
-      },
-    });
-    res.status(201).json(item);
-  } catch (error: any) {
-    if (error.name === 'ZodError') { res.status(400).json({ error: 'Dados inválidos' }); return; }
-    res.status(500).json({ error: 'Erro ao criar item de saída' });
-  }
+router.get('/', authMiddleware, async (_req: AuthRequest, res: Response) => {
+  const result = await prisma.listaSaida.findMany({ include: { transportadora: true }, orderBy: { exitDate: 'desc' } });
+  res.json(result);
 });
 
-router.delete('/:id', authMiddleware, async (req, res): Promise<void> => {
-  try {
-    const id = parseInt(req.params.id);
-    await prisma.listaSaida.delete({ where: { id } });
-    res.json({ success: true });
-  } catch { res.status(500).json({ error: 'Erro ao excluir item' }); }
+router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const v = ListaSaidaSchema.parse(req.body);
+  await prisma.listaSaida.create({
+    data: { opNumber: v.op_number, client: v.client, color: v.color, material: v.material, quantity: v.quantity, unit: v.unit, transportadoraId: v.transportadora_id, notes: v.notes, exitDate: new Date(v.exit_date) },
+  });
+  res.status(201).json({ success: true });
+});
+
+router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  await prisma.listaSaida.delete({ where: { id: parseInt(req.params.id) } });
+  res.json({ success: true });
 });
 
 export default router;

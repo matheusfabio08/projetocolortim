@@ -1,75 +1,57 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { z } from 'zod';
-import { prisma } from '../lib/prisma.js';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { prisma } from '../lib/prisma';
 
 const router = Router();
 
 const InspectionSchema = z.object({
   item_description: z.string().min(1),
-  weight: z.number(),
-  destination_sector: z.string(),
+  weight: z.number().positive(),
+  destination_sector: z.string().min(1),
   observations: z.string().optional(),
-  defect_image_url: z.string().optional(),
-  employee_name: z.string(),
-  inspection_date: z.string(),
+  defect_image_url: z.string().url().optional().or(z.literal('')),
+  employee_name: z.string().min(1),
+  inspection_date: z.string().min(1),
 });
 
-router.get('/inspections', authMiddleware, async (_req, res): Promise<void> => {
-  try {
-    const inspections = await prisma.fabricQualityInspection.findMany({ orderBy: { inspectionDate: 'desc' } });
-    res.json(inspections);
-  } catch { res.status(500).json({ error: 'Erro ao buscar inspeções' }); }
+router.get('/inspections', authMiddleware, async (_req: AuthRequest, res: Response) => {
+  const inspections = await prisma.fabricQualityInspection.findMany({ orderBy: { inspectionDate: 'desc' } });
+  res.json(inspections);
 });
 
-router.post('/inspections', authMiddleware, async (req, res): Promise<void> => {
-  try {
-    const validated = InspectionSchema.parse(req.body);
-    const last = await prisma.fabricQualityInspection.findFirst({ orderBy: { id: 'desc' }, select: { inspectionNumber: true } });
-    let num = 1;
-    if (last?.inspectionNumber) num = parseInt(last.inspectionNumber.split('-')[1] || '0') + 1;
-    const inspectionNumber = `INS-${String(num).padStart(3, '0')}`;
-    const inspection = await prisma.fabricQualityInspection.create({
-      data: {
-        inspectionNumber, itemDescription: validated.item_description, weight: validated.weight,
-        destinationSector: validated.destination_sector, observations: validated.observations,
-        defectImageUrl: validated.defect_image_url, employeeName: validated.employee_name,
-        inspectionDate: validated.inspection_date,
-      },
-    });
-    res.status(201).json({ success: true, inspection_number: inspectionNumber, id: inspection.id });
-  } catch (error: any) {
-    if (error.name === 'ZodError') { res.status(400).json({ error: 'Dados inválidos' }); return; }
-    res.status(500).json({ error: 'Erro ao criar inspeção' });
-  }
+router.get('/inspections/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const inspection = await prisma.fabricQualityInspection.findUnique({ where: { id: parseInt(req.params.id) } });
+  if (!inspection) { res.status(404).json({ error: 'Inspeção não encontrada' }); return; }
+  res.json(inspection);
 });
 
-router.put('/inspections/:id', authMiddleware, async (req, res): Promise<void> => {
-  try {
-    const id = parseInt(req.params.id);
-    const validated = InspectionSchema.parse(req.body);
-    await prisma.fabricQualityInspection.update({
-      where: { id },
-      data: {
-        itemDescription: validated.item_description, weight: validated.weight,
-        destinationSector: validated.destination_sector, observations: validated.observations,
-        defectImageUrl: validated.defect_image_url, employeeName: validated.employee_name,
-        inspectionDate: validated.inspection_date,
-      },
-    });
-    res.json({ success: true });
-  } catch (error: any) {
-    if (error.name === 'ZodError') { res.status(400).json({ error: 'Dados inválidos' }); return; }
-    res.status(500).json({ error: 'Erro ao atualizar inspeção' });
-  }
+router.post('/inspections', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const v = InspectionSchema.parse(req.body);
+
+  const last = await prisma.fabricQualityInspection.findFirst({ orderBy: { id: 'desc' } });
+  const num = last ? parseInt(last.inspectionNumber.replace('INS-', '')) + 1 : 1;
+  const inspectionNumber = `INS-${String(num).padStart(3, '0')}`;
+
+  await prisma.fabricQualityInspection.create({
+    data: { inspectionNumber, itemDescription: v.item_description, weight: v.weight, destinationSector: v.destination_sector, observations: v.observations, defectImageUrl: v.defect_image_url || null, employeeName: v.employee_name, inspectionDate: v.inspection_date },
+  });
+
+  res.status(201).json({ success: true, inspection_number: inspectionNumber });
 });
 
-router.delete('/inspections/:id', authMiddleware, async (req, res): Promise<void> => {
-  try {
-    const id = parseInt(req.params.id);
-    await prisma.fabricQualityInspection.delete({ where: { id } });
-    res.json({ success: true });
-  } catch { res.status(500).json({ error: 'Erro ao excluir inspeção' }); }
+router.put('/inspections/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const v = InspectionSchema.parse(req.body);
+  await prisma.fabricQualityInspection.update({
+    where: { id: parseInt(req.params.id) },
+    data: { itemDescription: v.item_description, weight: v.weight, destinationSector: v.destination_sector, observations: v.observations, defectImageUrl: v.defect_image_url || null, employeeName: v.employee_name, inspectionDate: v.inspection_date },
+  });
+  res.json({ success: true });
+});
+
+router.delete('/inspections/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  await prisma.fabricQualityInspection.delete({ where: { id: parseInt(req.params.id) } });
+  res.json({ success: true });
 });
 
 export default router;

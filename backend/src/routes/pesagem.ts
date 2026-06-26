@@ -1,48 +1,54 @@
-import { Router } from 'express';
-import { prisma } from '../lib/prisma.js';
-import { authMiddleware, AuthRequest } from '../middleware/auth.js';
+import { Router, Response } from 'express';
+import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { prisma } from '../lib/prisma';
 
 const router = Router();
 
-router.get('/records', authMiddleware, async (_req, res): Promise<void> => {
-  try {
-    const waiting = await prisma.productionOrder.findMany({
+router.get('/records', authMiddleware, async (_req: AuthRequest, res: Response) => {
+  const [waiting, inProgress, completed] = await Promise.all([
+    prisma.productionOrder.findMany({
       where: { requiresLab: true, lotNumber: null, parentOpId: null, recipeWeighed: false, pesagem: null },
-      include: { laboratory: true },
+      include: { laboratories: { take: 1 } },
       orderBy: { createdAt: 'desc' },
-    });
-    const inProgress = await prisma.productionOrder.findMany({
-      where: { requiresLab: true, pesagem: { isCompleted: false } },
+    }),
+    prisma.productionOrder.findMany({
+      where: { requiresLab: true, lotNumber: null, parentOpId: null, pesagem: { endTime: null } },
       include: { pesagem: true },
-    });
-    const completed = await prisma.productionOrder.findMany({
-      where: { requiresLab: true, recipeWeighed: true },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.productionOrder.findMany({
+      where: { requiresLab: true, lotNumber: null, parentOpId: null, recipeWeighed: true },
       include: { pesagem: true },
       orderBy: { updatedAt: 'desc' },
       take: 50,
-    });
-    res.json({ waiting, inProgress, completed });
-  } catch { res.status(500).json({ error: 'Erro ao buscar pesagem' }); }
+    }),
+  ]);
+
+  res.json({ waiting, inProgress, completed });
 });
 
-router.post('/start', authMiddleware, async (req: AuthRequest, res): Promise<void> => {
-  try {
-    const { op_id, employee_id } = req.body;
-    await prisma.poPesagem.create({ data: { opId: op_id, employeeId: employee_id, isCompleted: false } });
-    res.json({ success: true });
-  } catch { res.status(500).json({ error: 'Erro ao iniciar pesagem' }); }
+router.post('/start', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { op_id } = req.body;
+  if (!op_id) { res.status(400).json({ error: 'op_id obrigatório' }); return; }
+
+  await prisma.productionOrder.update({ where: { id: op_id }, data: { recipeApproved: true } });
+  await prisma.poPesagem.create({ data: { opId: op_id, startTime: new Date() } });
+
+  res.status(201).json({ success: true });
 });
 
-router.post('/complete', authMiddleware, async (req: AuthRequest, res): Promise<void> => {
-  try {
-    const { op_id, end_time, observations } = req.body;
-    await prisma.poPesagem.update({
-      where: { opId: op_id },
-      data: { endTime: end_time, observations, isCompleted: true },
-    });
-    await prisma.productionOrder.update({ where: { id: op_id }, data: { recipeWeighed: true } });
-    res.json({ success: true });
-  } catch { res.status(500).json({ error: 'Erro ao completar pesagem' }); }
+router.post('/finish', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { op_id, employee_id, notes } = req.body;
+  if (!op_id || !employee_id) { res.status(400).json({ error: 'op_id e employee_id obrigatórios' }); return; }
+
+  await prisma.poPesagem.updateMany({
+    where: { opId: op_id, endTime: null },
+    data: { endTime: new Date(), employeeId: employee_id, notes },
+  });
+
+  await prisma.productionOrder.update({ where: { id: op_id }, data: { recipeWeighed: true } });
+
+  res.json({ success: true });
 });
 
 export default router;

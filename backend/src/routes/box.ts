@@ -1,11 +1,13 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { z } from 'zod';
-import { prisma } from '../lib/prisma.js';
-import { authMiddleware, AuthRequest } from '../middleware/auth.js';
+import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { prisma } from '../lib/prisma';
+
+const router = Router();
 
 const BoxSchema = z.object({
   po_id: z.number(),
-  employee_id: z.number().optional(),
+  employee_id: z.number(),
   has_adjustment: z.boolean().default(false),
   adjustment_details: z.string().optional(),
   is_reprocess: z.boolean().default(false),
@@ -13,72 +15,43 @@ const BoxSchema = z.object({
   timestamp: z.string(),
 });
 
-type BoxName = 'box4' | 'box5' | 'box6';
+function makeBoxRoutes(boxNum: 4 | 5 | 6) {
+  const statusKey = `box${boxNum}` as const;
 
-export default function boxRouter(boxName: BoxName) {
-  const router = Router();
+  router.post(`/box${boxNum}`, authMiddleware, async (req: AuthRequest, res: Response) => {
+    const v = BoxSchema.parse(req.body);
+    const userId = req.user!.id;
+    const data = { opId: v.po_id, employeeId: v.employee_id, hasAdjustment: v.has_adjustment, adjustmentDetails: v.adjustment_details, isReprocess: v.is_reprocess, reprocessReason: v.reprocess_reason, timestamp: v.timestamp };
 
-  const modelMap = {
-    box4: (prisma as any).poBox4,
-    box5: (prisma as any).poBox5,
-    box6: (prisma as any).poBox6,
-  };
+    if (boxNum === 4) await prisma.poBox4.create({ data });
+    else if (boxNum === 5) await prisma.poBox5.create({ data });
+    else await prisma.poBox6.create({ data });
 
-  router.get('/records', authMiddleware, async (_req, res): Promise<void> => {
-    try {
-      const model = modelMap[boxName];
-      const waiting = await prisma.productionOrder.findMany({
-        where: { status: boxName },
-        orderBy: { createdAt: 'asc' },
-      });
-      const inProgressRaw = await prisma.poInProgress.findMany({
-        where: { stage: boxName },
-        select: { opId: true },
-      });
-      const inProgressIds = new Set(inProgressRaw.map(x => x.opId));
-      const waitingData = waiting.filter(op => !inProgressIds.has(op.id));
-      const inProgressData = waiting.filter(op => inProgressIds.has(op.id));
+    await prisma.productionOrder.update({ where: { id: v.po_id }, data: { status: 'producao', currentStage: statusKey } });
+    await prisma.activityLog.create({ data: { opId: v.po_id, stage: statusKey, action: 'processed', userId, details: `Emp ${v.employee_id}${v.has_adjustment ? ' - Ajuste' : ''}${v.is_reprocess ? ' - Reprocesso' : ''}` } });
 
-      const oneDayAgo = new Date();
-      oneDayAgo.setHours(oneDayAgo.getHours() - 24);
-      const completed = await prisma.productionOrder.findMany({
-        where: { status: 'producao', currentStage: boxName, updatedAt: { gte: oneDayAgo } },
-      });
-      res.json({ waiting: waitingData, inProgress: inProgressData, completed });
-    } catch {
-      res.status(500).json({ error: 'Erro ao buscar registros' });
-    }
+    res.json({ success: true });
   });
 
-  router.post('/', authMiddleware, async (req: AuthRequest, res): Promise<void> => {
-    try {
-      const validated = BoxSchema.parse(req.body);
-      const user = req.user!;
-      const model = modelMap[boxName];
-      await model.create({
-        data: {
-          poId: validated.po_id, employeeId: validated.employee_id,
-          hasAdjustment: validated.has_adjustment, adjustmentDetails: validated.adjustment_details,
-          isReprocess: validated.is_reprocess, reprocessReason: validated.reprocess_reason,
-          timestamp: validated.timestamp,
-        },
-      });
-      await prisma.productionOrder.update({
-        where: { id: validated.po_id },
-        data: { status: 'producao', currentStage: boxName },
-      });
-      await prisma.activityLog.create({
-        data: {
-          opId: validated.po_id, stage: boxName, action: 'processed', userId: user.id,
-          details: `${validated.has_adjustment ? 'Com ajuste' : ''}${validated.is_reprocess ? ' - Reprocesso' : ''}`.trim() || undefined,
-        },
-      });
-      res.json({ success: true });
-    } catch (error: any) {
-      if (error.name === 'ZodError') { res.status(400).json({ error: 'Dados inválidos' }); return; }
-      res.status(500).json({ error: `Erro no ${boxName}` });
-    }
-  });
+  router.get(`/box${boxNum}/records`, authMiddleware, async (_req: AuthRequest, res: Response) => {
+    const [waiting, inProgressRaw, recentlyDone] = await Promise.all([
+      prisma.productionOrder.findMany({ where: { status: statusKey, isCompleted: false }, orderBy: { entryDate: 'asc' }, include: { inProgress: true } }),
+      prisma.productionOrder.findMany({ where: { status: statusKey }, include: { inProgress: { where: { stage: statusKey } } } }),
+      prisma.productionOrder.findMany({
+        where: { status: 'producao', currentStage: statusKey, updatedAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+        orderBy: { updatedAt: 'desc' },
+      }),
+    ]);
 
-  return router;
+    const inProgress = inProgressRaw.filter(op => op.inProgress.length > 0);
+    const waitingFiltered = waiting.filter(op => !inProgress.find(ip => ip.id === op.id));
+
+    res.json({ waiting: waitingFiltered, inProgress, completed: recentlyDone });
+  });
 }
+
+makeBoxRoutes(4);
+makeBoxRoutes(5);
+makeBoxRoutes(6);
+
+export default router;

@@ -1,55 +1,55 @@
 import 'dotenv/config';
 import bcrypt from 'bcryptjs';
-import { prisma } from './lib/prisma.js';
+import { prisma } from './lib/prisma';
 
 async function main() {
-  console.log('[SEED] Iniciando seed do banco...');
+  console.log('🌱 Iniciando seed...');
 
-  // Create admin user
-  const existing = await prisma.user.findUnique({ where: { username: 'admin' } });
-  if (!existing) {
-    const passwordHash = await bcrypt.hash('admin123', 12);
-    await prisma.user.create({
-      data: {
-        username: 'admin', passwordHash, name: 'Administrador',
-        email: 'admin@colortim.com.br', role: 'Admin',
-      },
-    });
-    console.log('[SEED] Admin criado: admin / admin123');
-  } else {
-    console.log('[SEED] Admin já existe, pulando...');
-  }
+  // Admin user
+  const adminHash = await bcrypt.hash('admin123', 12);
+  await prisma.user.upsert({
+    where: { username: 'admin' },
+    update: {},
+    create: { username: 'admin', passwordHash: adminHash, name: 'Administrador', email: 'admin@colortim.com.br', role: 'Admin' },
+  });
 
-  // Seed regiões
-  const regions = ['Jaraguá do Sul', 'Brusque', 'Gaspar'];
-  for (const name of regions) {
-    await prisma.region.upsert({ where: { name }, update: {}, create: { name } });
-  }
-  console.log('[SEED] Regiões criadas');
-
-  // Seed fibras
-  const fibers = ['Algodão', 'Poliéster', 'Viscose', 'Nylon', 'Acrílico', 'Modal', 'Linho', 'Seda'];
+  // Default fibers
+  const fibers = ['Algodão', 'Poliéster', 'Viscose', 'Modal', 'Nylon', 'Acrílico', 'Linho', 'Seda'];
   for (const name of fibers) {
-    const existing = await prisma.fiber.findFirst({ where: { name } });
-    if (!existing) await prisma.fiber.create({ data: { name } });
+    await prisma.fiber.upsert({ where: { name }, update: {}, create: { name } });
   }
-  console.log('[SEED] Fibras criadas');
 
-  // Seed funcionários de exemplo
+  // Default regions
+  const regions = [
+    { name: 'Jaraguá do Sul', slug: 'jaragua' },
+    { name: 'Brusque', slug: 'brusque' },
+    { name: 'Gaspar', slug: 'gaspar' },
+  ];
+  for (const r of regions) {
+    await prisma.region.upsert({ where: { slug: r.slug }, update: {}, create: r });
+  }
+
+  // Sample transportadoras
+  const transportadoras = ['Jadlog', 'Correios', 'Transportadora Local', 'Retirada pelo Cliente'];
+  for (const name of transportadoras) {
+    const existing = await prisma.transportadora.findFirst({ where: { name } });
+    if (!existing) await prisma.transportadora.create({ data: { name } });
+  }
+
+  // Sample employees
   const employees = [
     { name: 'João Silva', sector: 'Preparação' },
-    { name: 'Maria Santos', sector: 'Preparação' },
-    { name: 'Carlos Oliveira', sector: 'Produção' },
-    { name: 'Ana Costa', sector: 'Qualidade' },
-    { name: 'Pedro Ferreira', sector: 'Laboratório' },
+    { name: 'Maria Santos', sector: 'Produção' },
+    { name: 'Pedro Costa', sector: 'Qualidade' },
+    { name: 'Ana Lima', sector: 'Laboratório' },
   ];
   for (const emp of employees) {
     const existing = await prisma.employee.findFirst({ where: { name: emp.name } });
     if (!existing) await prisma.employee.create({ data: emp });
   }
-  console.log('[SEED] Funcionários criados');
 
-  console.log('[SEED] Concluído!');
+  console.log('✅ Seed concluído!');
+  console.log('📌 Login: admin / admin123');
 }
 
 main()
