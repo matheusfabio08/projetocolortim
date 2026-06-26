@@ -9,8 +9,11 @@ export interface AuthRequest extends Request {
     name: string;
     email: string;
     role: string;
+    isActive: boolean;
   };
 }
+
+const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
 
 export const authMiddleware = async (
   req: AuthRequest,
@@ -19,32 +22,29 @@ export const authMiddleware = async (
 ): Promise<void> => {
   const authHeader = req.headers.authorization;
 
-  if (!authHeader?.startsWith('Bearer ')) {
-    res.status(401).json({ error: 'Token não fornecido' });
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    res.status(401).json({ error: 'Token de autenticação não fornecido' });
     return;
   }
 
   const token = authHeader.split(' ')[1];
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; sessionId: string };
 
-    // Verify session still exists in DB (handles logout/revocation)
-    const session = await prisma.userSession.findFirst({
-      where: {
-        token,
-        userId: payload.id,
-        expiresAt: { gt: new Date() },
-      },
-      include: {
-        user: {
-          select: { id: true, username: true, name: true, email: true, role: true, isActive: true },
-        },
-      },
+    // Verify session still exists in DB (invalidation support)
+    const session = await prisma.session.findUnique({
+      where: { token },
+      include: { user: true },
     });
 
-    if (!session || !session.user.isActive) {
-      res.status(401).json({ error: 'Sessão inválida ou expirada' });
+    if (!session || session.expiresAt < new Date()) {
+      res.status(401).json({ error: 'Sessão expirada ou inválida' });
+      return;
+    }
+
+    if (!session.user.isActive) {
+      res.status(401).json({ error: 'Usuário desativado' });
       return;
     }
 
@@ -54,7 +54,11 @@ export const authMiddleware = async (
       name: session.user.name,
       email: session.user.email,
       role: session.user.role,
+      isActive: session.user.isActive,
     };
+
+    // Suppress unused variable warning
+    void decoded;
 
     next();
   } catch {
@@ -62,11 +66,16 @@ export const authMiddleware = async (
   }
 };
 
-export const requireRole = (...roles: string[]) =>
-  (req: AuthRequest, res: Response, next: NextFunction): void => {
-    if (!req.user || !roles.includes(req.user.role)) {
+export const requireRole = (...roles: string[]) => {
+  return (req: AuthRequest, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({ error: 'Não autenticado' });
+      return;
+    }
+    if (!roles.includes(req.user.role)) {
       res.status(403).json({ error: 'Acesso negado' });
       return;
     }
     next();
   };
+};
