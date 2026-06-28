@@ -1,57 +1,49 @@
-# Colortim — ERP de Gestão de Produção
+# Colortim ERP
 
-Sistema ERP completo para gestão de produção têxtil, reconstruído do zero com stack moderna.
+Sistema ERP industrial reconstruído com stack moderna e segura.
 
 ## Stack
 
-| Camada     | Tecnologia                           |
-|------------|--------------------------------------|
-| Frontend   | React 18 + TypeScript + Vite + Tailwind CSS |
-| Backend    | Node.js + Express + TypeScript       |
-| Banco      | PostgreSQL                           |
-| ORM        | Prisma                               |
-| Auth       | JWT + sessão persistida no banco     |
-| Segurança  | Helmet + CORS + Rate Limit + bcrypt  |
+- **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS
+- **Backend**: Node.js + Express + TypeScript
+- **ORM**: Prisma
+- **Banco de dados**: PostgreSQL 16
+- **Autenticação**: JWT + sessões persistidas no banco
+- **Segurança**: Helmet, CORS, Rate Limiting, bcrypt, Zod validation
 
-## Estrutura
+## Pré-requisitos
 
-```
-projetocolortim/
-├── backend/           # API Node.js + Express + Prisma
-│   ├── prisma/
-│   │   └── schema.prisma
-│   └── src/
-│       ├── index.ts
-│       ├── lib/
-│       ├── middleware/
-│       ├── routes/
-│       └── seed.ts
-└── frontend/          # React + TypeScript + Vite
-    └── src/
-        ├── App.tsx
-        ├── contexts/
-        ├── lib/
-        ├── components/
-        └── pages/
-```
-
-## Instalação e execução
-
-### Pré-requisitos
 - Node.js 20+
-- PostgreSQL 15+
+- PostgreSQL 16+ (ou Docker)
+
+## Setup com Docker (recomendado)
+
+```bash
+# Copie e edite o .env
+cp backend/.env.example backend/.env
+# Edite JWT_SECRET com um valor aleatório longo (mínimo 64 chars)
+
+# Suba tudo
+docker-compose up -d
+
+# Rode o seed (primeira vez)
+docker exec colortim_backend npx tsx src/seed.ts
+```
+
+Acesse em: `http://localhost`
+
+## Setup manual
 
 ### Backend
 
 ```bash
 cd backend
 cp .env.example .env
-# Edite .env com DATABASE_URL e JWT_SECRET
+# Configure DATABASE_URL e JWT_SECRET no .env
 npm install
 npx prisma migrate dev --name init
 npx tsx src/seed.ts
 npm run dev
-# API rodando em http://localhost:4000
 ```
 
 ### Frontend
@@ -60,36 +52,45 @@ npm run dev
 cd frontend
 npm install
 npm run dev
-# App rodando em http://localhost:3000
 ```
 
-### Login inicial
+## Credenciais padrão (seed)
 
-| Usuário | Senha  | Perfil        |
-|---------|--------|---------------|
-| `admin` | `admin123` | Administrador |
+| Usuário | Senha | Role |
+|---------|-------|------|
+| `admin` | `Admin@2025!` | ADMIN |
 
-> ⚠️ Altere a senha do admin imediatamente após o primeiro login!
+> ⚠️ Altere a senha do admin imediatamente em produção!
 
-## Módulos implementados
+## Módulos do sistema
 
-- **Dashboard** — KPIs + tabela de OPs recentes
-- **Gerenciamento** — CRUD completo de Ordens de Produção
-- **PCP** — Quadro Kanban com todas as OPs por status
-- **Almoxarifado** — OPs aguardando material
-- **Laboratório** — Laudos e receitas de tingimento
-- **Pesagem** — Registro de pesagem por OP (bruto/tara/líquido)
-- **Preparação** — Lançamento individual e em lote
-- **Produção** — Box 1, 2 e 3 com controle de status
-- **Admin** — Gestão de usuários e perfis de acesso
+| Módulo | Descrição |
+|--------|-----------|
+| Dashboard | KPIs e visão geral |
+| Gerenciamento | Gestão de OPs e relatórios |
+| PCP | Planejamento e controle de produção |
+| Almoxarifado | Controle de materiais |
+| Preparação | Preparação individual e em lote |
+| Produção | Boxes 1, 2, 3 |
+| Secadora | Controle de secagem |
+| Destrinchagem | Processo de destrinchagem |
+| Enrolagem | Processo de enrolagem |
+| Qualidade | Controle de qualidade |
+| Laboratório | Análises laboratoriais |
+| Pesagem | Controle de pesagem |
+| Box 4/5/6 | Boxes finais |
+| Lista de Saída | Despacho e saída |
+| Qualidade Tecido | Controle de qualidade do tecido |
+| Scrolls | Visualização geral de OPs |
+| Admin | Gestão de usuários e acessos |
 
 ## Segurança
 
-- JWT com expiração + sessão invalidada no logout
-- Rate limiting (login: 20/15min; geral: 500/15min)
+- JWT com expiração configurável + sessões no banco
+- Rate limiting (login: 20 req/15min; API: 500 req/15min)
 - Headers HTTP seguros via Helmet
 - CORS restrito à origem configurada
 - Hashing bcrypt com salt 12
+- Validação de inputs com Zod em todas as rotas
+- Proteção contra SQL injection via Prisma ORM
 - Role-based access control (RBAC)
-- Prepared statements via Prisma (prevenção SQL injection)
-- Validação de inputs com Zod

@@ -1,0 +1,54 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: colortim_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: colortim
+      POSTGRES_PASSWORD: colortim_pass
+      POSTGRES_DB: colortim_erp
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U colortim -d colortim_erp']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: colortim_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://colortim:colortim_pass@postgres:5432/colortim_erp
+      JWT_SECRET: ${JWT_SECRET:-change_this_to_a_very_long_random_secret_in_production}
+      PORT: 3001
+      NODE_ENV: production
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+    ports:
+      - '3001:3001'
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: colortim_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - '80:80'
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
+
+volumes:
+  postgres_data:
