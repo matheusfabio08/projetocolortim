@@ -4,11 +4,7 @@ import { Plus, Trash2, PackagePlus, Printer, Search, Edit2, FilePlus } from "luc
 import { useAPI } from "@/hooks/useAPI";
 import { format, addBusinessDays } from "date-fns";
 
-interface Fibra {
-  id: number;
-  name: string;
-}
-
+interface Fibra { id: number; name: string; }
 interface Item {
   id?: number;
   material: string;
@@ -19,37 +15,16 @@ interface Item {
   selectedFibers: number[];
   tempId: string;
 }
-
-interface POItem {
-  material: string;
-  quantity: number;
-  unit: string;
-  individual_op: string;
-}
-
+interface POItem { material: string; quantity: number; unit: string; individual_op: string; }
 interface CreatedPO {
-  id: number;
-  op_number: string;
-  client: string;
-  color: string;
-  order_number: string | null;
-  description: string | null;
-  entry_date: string;
-  expected_date: string;
-  items: POItem[];
+  id: number; op_number: string; client: string; color: string;
+  order_number: string | null; description: string | null;
+  entry_date: string; expected_date: string; items: POItem[];
 }
-
 interface ExistingPO {
-  id: number;
-  op_number: string;
-  client: string;
-  color: string;
-  order_number: string | null;
-  description: string | null;
-  entry_date: string;
-  expected_date: string;
-  status: string;
-  created_at: string;
+  id: number; op_number: string; client: string; color: string;
+  order_number: string | null; description: string | null;
+  entry_date: string; expected_date: string; status: string; created_at: string;
 }
 
 export default function Almoxarifado() {
@@ -59,524 +34,353 @@ export default function Almoxarifado() {
   const [searchTerm, setSearchTerm] = useState("");
   const [existingOPs, setExistingOPs] = useState<ExistingPO[]>([]);
   const [editingOP, setEditingOP] = useState<number | null>(null);
-
   const [client, setClient] = useState("");
   const [color, setColor] = useState("");
   const [orderNumber, setOrderNumber] = useState("");
   const [description, setDescription] = useState("");
   const [entryDate, setEntryDate] = useState(new Date().toISOString().split('T')[0]);
-  const [expectedDate, setExpectedDate] = useState(
-    addBusinessDays(new Date(), 5).toISOString().split('T')[0]
-  );
+  const [expectedDate, setExpectedDate] = useState(addBusinessDays(new Date(), 5).toISOString().split('T')[0]);
   const [regionJaragua, setRegionJaragua] = useState(false);
   const [regionBrusque, setRegionBrusque] = useState(false);
   const [regionGaspar, setRegionGaspar] = useState(false);
   const [fibras, setFibras] = useState<Fibra[]>([]);
-
-  const handleEntryDateChange = (newEntryDate: string) => {
-    setEntryDate(newEntryDate);
-    const entryDateObj = new Date(newEntryDate + 'T12:00:00');
-    const newExpectedDate = addBusinessDays(entryDateObj, 5);
-    setExpectedDate(newExpectedDate.toISOString().split('T')[0]);
-  };
-
-  const [items, setItems] = useState<Item[]>([{
-    material: "",
-    quantity: "",
-    unit: "metros",
-    requiresLab: false,
-    requiresFabricQuality: false,
-    selectedFibers: [],
-    tempId: crypto.randomUUID()
-  }]);
+  const [items, setItems] = useState<Item[]>([{ material: "", quantity: "", unit: "metros", requiresLab: false, requiresFabricQuality: false, selectedFibers: [], tempId: crypto.randomUUID() }]);
   const [createdPO, setCreatedPO] = useState<CreatedPO | null>(null);
   const [nextOPNumber, setNextOPNumber] = useState<string>("001");
 
-  useEffect(() => {
-    fetchNextOPNumber();
-    fetchFibras();
-  }, []);
-
-  const fetchFibras = async () => {
-    try {
-      const result = await get<Fibra[]>("/fibras");
-      setFibras(result);
-    } catch (error) {
-      console.error("Erro ao buscar fibras:", error);
-    }
+  const handleEntryDateChange = (v: string) => {
+    setEntryDate(v);
+    setExpectedDate(addBusinessDays(new Date(v + 'T12:00:00'), 5).toISOString().split('T')[0]);
   };
 
-  useEffect(() => {
-    if (view === "manage") fetchExistingOPs();
-  }, [view]);
+  useEffect(() => { fetchNextOPNumber(); fetchFibras(); }, []);
+  useEffect(() => { if (view === "manage") fetchExistingOPs(); }, [view]);
 
-  const fetchNextOPNumber = async () => {
-    try {
-      const result = await get<{ next_op_number: string}>("/production-orders/next-op-number");
-      setNextOPNumber(result.next_op_number);
-    } catch (error) {
-      console.error("Erro ao buscar próximo número de OP:", error);
-    }
-  };
-
-  const fetchExistingOPs = async () => {
-    try {
-      const result = await get<ExistingPO[]>("/production-orders");
-      setExistingOPs(result);
-    } catch (error) {
-      console.error("Erro ao buscar OPs:", error);
-    }
-  };
-
-  const getItemOPNumber = (index: number) => {
-    if (!nextOPNumber) return "";
-    const baseNum = parseInt(nextOPNumber);
-    return String(baseNum + index).padStart(3, '0');
-  };
-
-  const addItem = () => {
-    setItems([...items, {
-      material: "",
-      quantity: "",
-      unit: "metros",
-      requiresLab: false,
-      requiresFabricQuality: false,
-      selectedFibers: [],
-      tempId: crypto.randomUUID()
-    }]);
-  };
-
-  const removeItem = (tempId: string) => {
-    if (items.length > 1) setItems(items.filter((item) => item.tempId !== tempId));
-  };
-
-  const updateItem = (tempId: string, field: keyof Item, value: unknown) => {
-    setItems(items.map((item) => (item.tempId === tempId ? { ...item, [field]: value } : item)));
-  };
+  const fetchFibras = async () => { try { setFibras(await get<Fibra[]>("/fibras")); } catch { /* ignore */ } };
+  const fetchNextOPNumber = async () => { try { const r = await get<{next_op_number:string}>("/production-orders/next-op-number"); setNextOPNumber(r.next_op_number); } catch { /* ignore */ } };
+  const fetchExistingOPs = async () => { try { setExistingOPs(await get<ExistingPO[]>("/production-orders")); } catch { /* ignore */ } };
+  const getItemOPNumber = (i: number) => String(parseInt(nextOPNumber) + i).padStart(3, '0');
+  const addItem = () => setItems([...items, { material: "", quantity: "", unit: "metros", requiresLab: false, requiresFabricQuality: false, selectedFibers: [], tempId: crypto.randomUUID() }]);
+  const removeItem = (t: string) => { if (items.length > 1) setItems(items.filter(i => i.tempId !== t)); };
+  const updateItem = (t: string, f: keyof Item, v: unknown) => setItems(items.map(i => i.tempId === t ? {...i, [f]: v} : i));
 
   const buildPayload = () => ({
-    client: client.toUpperCase(),
-    color: color.toUpperCase(),
+    client: client.toUpperCase(), color: color.toUpperCase(),
     order_number: orderNumber ? orderNumber.toUpperCase() : undefined,
     description: description ? description.toUpperCase() : undefined,
     entry_date: new Date(entryDate + 'T12:00:00').toISOString(),
     expected_date: new Date(expectedDate + 'T12:00:00').toISOString(),
-    region_jaragua: regionJaragua,
-    region_brusque: regionBrusque,
-    region_gaspar: regionGaspar,
-    items: items.map((item) => ({
-      material: item.material.toUpperCase(),
-      quantity: parseFloat(item.quantity) || 0,
-      unit: item.unit,
-      requires_lab: item.requiresLab,
-      requires_fabric_quality: item.requiresFabricQuality,
-      fiber_id: item.selectedFibers[0] || null,
-      is_dual_fiber: item.selectedFibers.length >= 2,
-      fiber2_id: item.selectedFibers[1] || null,
+    region_jaragua: regionJaragua, region_brusque: regionBrusque, region_gaspar: regionGaspar,
+    items: items.map(item => ({
+      material: item.material.toUpperCase(), quantity: parseFloat(item.quantity) || 0, unit: item.unit,
+      requires_lab: item.requiresLab, requires_fabric_quality: item.requiresFabricQuality,
+      fiber_id: item.selectedFibers[0] || null, is_dual_fiber: item.selectedFibers.length >= 2, fiber2_id: item.selectedFibers[1] || null,
     })),
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!client || !color || items.some((item) => !item.material || !item.quantity)) {
-      alert("Por favor, preencha todos os campos obrigatórios");
-      return;
-    }
+    if (!client || !color || items.some(i => !i.material || !i.quantity)) { alert("Preencha todos os campos obrigatórios"); return; }
     setLoading(true);
     try {
       if (editingOP) {
         await put(`/production-orders/${editingOP}`, buildPayload());
-        const opDetails = await get<CreatedPO>(`/production-orders/${editingOP}`);
-        setCreatedPO(opDetails);
+        setCreatedPO(await get<CreatedPO>(`/production-orders/${editingOP}`));
         setEditingOP(null);
       } else {
-        const result = await post<{ id: number }>("/production-orders", buildPayload());
-        const opDetails = await get<CreatedPO>(`/production-orders/${result.id}`);
-        setCreatedPO(opDetails);
+        const r = await post<{id:number}>("/production-orders", buildPayload());
+        setCreatedPO(await get<CreatedPO>(`/production-orders/${r.id}`));
       }
-    } catch (error) {
-      alert(editingOP ? "Erro ao atualizar ficha de produção" : "Erro ao criar ficha de produção");
-    } finally {
-      setLoading(false);
-    }
+    } catch { alert(editingOP ? "Erro ao atualizar ficha" : "Erro ao criar ficha"); }
+    finally { setLoading(false); }
   };
 
   const handleEdit = async (op: ExistingPO) => {
     try {
-      const poDetails = await get<any>(`/production-orders/${op.id}`);
-      setEditingOP(op.id);
-      setClient(poDetails.client);
-      setColor(poDetails.color);
-      setOrderNumber(poDetails.order_number || "");
-      setDescription(poDetails.description || "");
-      setEntryDate(new Date(poDetails.entry_date).toISOString().split('T')[0]);
-      setExpectedDate(new Date(poDetails.expected_date).toISOString().split('T')[0]);
-      setRegionJaragua(!!poDetails.region_jaragua);
-      setRegionBrusque(!!poDetails.region_brusque);
-      setRegionGaspar(!!poDetails.region_gaspar);
-      setItems(poDetails.items.map((item: any) => {
-        const fibers: number[] = [];
-        if (item.fiber_id) fibers.push(item.fiber_id);
-        if (item.fiber2_id) fibers.push(item.fiber2_id);
-        return {
-          id: item.id,
-          material: item.material,
-          quantity: String(item.quantity || ""),
-          unit: item.unit || "metros",
-          requiresLab: !!item.requires_lab,
-          requiresFabricQuality: !!item.requires_fabric_quality,
-          selectedFibers: fibers,
-          tempId: crypto.randomUUID()
-        };
-      }));
+      const d = await get<any>(`/production-orders/${op.id}`);
+      setEditingOP(op.id); setClient(d.client); setColor(d.color);
+      setOrderNumber(d.order_number || ''); setDescription(d.description || '');
+      setEntryDate(new Date(d.entry_date).toISOString().split('T')[0]);
+      setExpectedDate(new Date(d.expected_date).toISOString().split('T')[0]);
+      setRegionJaragua(!!d.region_jaragua); setRegionBrusque(!!d.region_brusque); setRegionGaspar(!!d.region_gaspar);
+      setItems(d.items.map((it: any) => { const f: number[] = []; if (it.fiber_id) f.push(it.fiber_id); if (it.fiber2_id) f.push(it.fiber2_id); return { id: it.id, material: it.material, quantity: String(it.quantity||''), unit: it.unit||'metros', requiresLab: !!it.requires_lab, requiresFabricQuality: !!it.requires_fabric_quality, selectedFibers: f, tempId: crypto.randomUUID() }; }));
       setView("new");
-    } catch {
-      alert("Erro ao carregar detalhes da OP");
-    }
+    } catch { alert("Erro ao carregar OP"); }
   };
 
-  const handleReprint = async (op: ExistingPO) => {
-    try {
-      const opDetails = await get<CreatedPO>(`/production-orders/${op.id}`);
-      setCreatedPO(opDetails);
-    } catch {
-      alert("Erro ao carregar OP para impressão");
-    }
-  };
-
+  const handleReprint = async (op: ExistingPO) => { try { setCreatedPO(await get<CreatedPO>(`/production-orders/${op.id}`)); } catch { alert("Erro ao carregar OP"); } };
   const handleDelete = async (op: ExistingPO) => {
-    if (!confirm(`Tem certeza que deseja excluir a OP ${op.op_number}? Esta ação não pode ser desfeita.`)) return;
-    try {
-      await del(`/production-orders/${op.id}`);
-      alert("OP excluída com sucesso");
-      fetchExistingOPs();
-    } catch {
-      alert("Erro ao excluir OP");
-    }
+    if (!confirm(`Excluir OP ${op.op_number}?`)) return;
+    try { await del(`/production-orders/${op.id}`); alert("OP excluída"); fetchExistingOPs(); } catch { alert("Erro ao excluir"); }
   };
-
-  const handlePrint = () => window.print();
 
   const handleNewPO = () => {
-    setCreatedPO(null);
-    setEditingOP(null);
-    setClient("");
-    setColor("");
-    setOrderNumber("");
-    setDescription("");
+    setCreatedPO(null); setEditingOP(null); setClient(''); setColor(''); setOrderNumber(''); setDescription('');
     setEntryDate(new Date().toISOString().split('T')[0]);
     setExpectedDate(addBusinessDays(new Date(), 5).toISOString().split('T')[0]);
-    setRegionJaragua(false);
-    setRegionBrusque(false);
-    setRegionGaspar(false);
-    setItems([{
-      material: "",
-      quantity: "",
-      unit: "metros",
-      requiresLab: false,
-      requiresFabricQuality: false,
-      selectedFibers: [],
-      tempId: crypto.randomUUID()
-    }]);
+    setRegionJaragua(false); setRegionBrusque(false); setRegionGaspar(false);
+    setItems([{ material:'', quantity:'', unit:'metros', requiresLab:false, requiresFabricQuality:false, selectedFibers:[], tempId:crypto.randomUUID() }]);
     fetchNextOPNumber();
   };
 
-  const filteredOPs = existingOPs.filter((op) =>
+  const filteredOPs = existingOPs.filter(op =>
     op.op_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
     op.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
     op.color.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      almoxarifado: "Almoxarifado",
-      qualidade_malhas: "Qualidade de Malhas",
-      laboratorio: "Laboratório",
-      preparacao: "Preparação",
-      producao: "Produção",
-      secadora: "Secadora",
-      destrinchagem: "Destrinchagem",
-      enrolagem: "Enrolagem",
-      qualidade: "Qualidade",
-      concluido: "Concluído",
-    };
-    return labels[status] || status;
-  };
+  const getStatusLabel = (s: string) => ({ almoxarifado:'Almoxarifado', qualidade_malhas:'Qualidade de Malhas', laboratorio:'Laboratório', preparacao:'Preparação', producao:'Produção', secadora:'Secadora', destrinchagem:'Destrinchagem', enrolagem:'Enrolagem', qualidade:'Qualidade', concluido:'Concluído' }[s] || s);
 
-  // ─── FICHA DE IMPRESSÃO ───────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  //  FICHA DE IMPRESSÃO — pixel-perfect igual imagem fornecida
+  // ═══════════════════════════════════════════════════════════
   if (createdPO) {
     const horaAtual = format(new Date(), 'HH:mm');
-    const diaRetorno = format(new Date(createdPO.expected_date), 'dd');
+    const diaRetorno = format(new Date(createdPO.expected_date + 'T12:00:00'), 'dd');
+    const fmtDate = (d: string) => format(new Date(d + 'T12:00:00'), 'dd/MM/yy');
 
     return (
       <Layout>
-        {/* Botões de ação - ocultos na impressão */}
+        {/* ── botões tela ── */}
         <div className="max-w-4xl mx-auto mb-6 flex items-center justify-between print:hidden">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              {editingOP ? "Ficha Atualizada" : "Ficha Gerada com Sucesso"}
-            </h1>
-            <p className="text-gray-500 text-sm mt-1">OP {createdPO.op_number} · {createdPO.items.length} item(ns)</p>
+            <h1 className="text-2xl font-bold text-gray-900">Ficha Gerada com Sucesso</h1>
+            <p className="text-gray-500 text-sm mt-1">OP {createdPO.op_number} &middot; {createdPO.items.length} item(ns)</p>
           </div>
           <div className="flex gap-3">
-            <button onClick={handlePrint}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-semibold transition-all">
-              <Printer className="w-4 h-4" />
-              Imprimir
+            <button onClick={() => window.print()} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-semibold">
+              <Printer className="w-4 h-4" /> Imprimir
             </button>
-            <button onClick={handleNewPO}
-              className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg font-semibold transition-all">
-              Nova Ficha
-            </button>
+            <button onClick={handleNewPO} className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg font-semibold">Nova Ficha</button>
           </div>
         </div>
 
-        {/* CSS da ficha - injetado via style tag */}
+        {/* ── estilos da ficha ── */}
         <style>{`
           @media print {
-            body * { visibility: hidden !important; }
-            #ficha-impressao, #ficha-impressao * { visibility: visible !important; }
-            #ficha-impressao { position: fixed; top: 0; left: 0; width: 100%; }
-            .print\\:hidden { display: none !important; }
-            @page { size: A4 landscape; margin: 8mm; }
+            * { visibility: hidden !important; }
+            #ficha-op, #ficha-op * { visibility: visible !important; }
+            #ficha-op { position: fixed; inset: 0; display: flex; align-items: flex-start; justify-content: center; padding: 10mm; }
+            @page { size: A4 portrait; margin: 0; }
           }
-          #ficha-impressao {
+
+          /* ── container ── */
+          #ficha-op .ficha {
             font-family: Arial, Helvetica, sans-serif;
-            background: white;
+            width: 190mm;
+            border: 2.5px solid #000;
+            background: #fff;
+            box-sizing: border-box;
           }
-          .f-wrap {
-            width: 740px;
-            border: 2px solid #000;
-            margin: 0 auto;
-          }
-          /* ── CORPO PRINCIPAL ── */
-          .f-body {
-            display: flex;
+
+          /* ── TOPO: duas colunas ── */
+          #ficha-op .topo {
+            display: grid;
+            grid-template-columns: 60% 40%;
             border-bottom: 2px solid #000;
           }
-          /* Coluna esquerda larga */
-          .f-col-left {
-            width: 54%;
+
+          /* coluna esquerda do topo */
+          #ficha-op .col-esq {
             border-right: 2px solid #000;
             display: flex;
             flex-direction: column;
           }
-          .f-client {
-            font-size: 36px;
+          #ficha-op .nome-cliente {
+            font-size: 32px;
             font-weight: 900;
-            text-align: center;
-            padding: 12px 8px;
-            border-bottom: 1px solid #000;
-            line-height: 1;
+            padding: 10px 12px;
+            border-bottom: 1.5px solid #000;
+            line-height: 1.1;
           }
-          /* Área central: cor + imagem */
-          .f-mid {
-            display: flex;
-            flex: 1;
-            border-bottom: 1px solid #000;
+          /* linha cor + caixa imagem */
+          #ficha-op .linha-cor {
+            display: grid;
+            grid-template-columns: 1fr 90px;
+            border-bottom: 1.5px solid #000;
+            min-height: 90px;
           }
-          .f-color {
-            flex: 1;
-            font-size: 30px;
+          #ficha-op .cor-texto {
+            font-size: 26px;
             font-weight: 900;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 10px;
-            border-right: 1px solid #000;
+            padding: 8px;
+            border-right: 1.5px solid #000;
           }
-          .f-img-box {
-            width: 120px;
-            min-height: 80px;
-            border-left: none;
+          #ficha-op .img-box {
+            /* caixa vazia para amostra */
+            background: #fff;
           }
-          /* Especificações / materiais */
-          .f-specs {
+          /* area de materiais */
+          #ficha-op .materiais {
+            padding: 8px 10px;
+            min-height: 70px;
             font-size: 10.5px;
-            font-weight: bold;
-            padding: 6px 8px;
-            min-height: 52px;
-            line-height: 1.5;
+            font-weight: 700;
+            line-height: 1.7;
           }
-          /* Coluna direita estreita */
-          .f-col-right {
-            width: 46%;
+
+          /* coluna direita do topo */
+          #ficha-op .col-dir {
             display: flex;
             flex-direction: column;
           }
-          /* Tabela topo direita */
-          .f-info-table {
+          /* tabela info */
+          #ficha-op .info-table {
             width: 100%;
             border-collapse: collapse;
           }
-          .f-info-table td {
-            border-bottom: 1px solid #000;
+          #ficha-op .info-table td {
+            height: 21px;
+            padding: 2px 7px;
             font-size: 10.5px;
-            font-weight: bold;
-            padding: 3px 6px;
-            height: 22px;
+            font-weight: 800;
+            border-bottom: 1.5px solid #000;
+            border-right: 0;
           }
-          .f-lbl {
-            width: 48%;
-            background: #fff;
-            font-weight: 900;
+          #ficha-op .info-table td.lbl {
+            width: 50%;
+            border-right: 1.5px solid #000;
           }
-          .f-val {
+          #ficha-op .info-table td.val {
             text-align: right;
-            width: 52%;
+            font-weight: 700;
+            font-size: 11px;
           }
-          /* Número grande */
-          .f-num-block {
+          /* numero grande */
+          #ficha-op .num-grande {
             flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-bottom: 1px solid #000;
-            padding: 4px;
+            border-bottom: 1.5px solid #000;
+            padding: 6px 4px;
           }
-          .f-big-num {
-            font-size: 96px;
+          #ficha-op .num-grande span {
+            font-size: 100px;
             font-weight: 900;
             line-height: 1;
           }
-          /* Linha ESPECIFICAÇÕES */
-          .f-spec-label {
+          /* label especificacoes */
+          #ficha-op .esp-label {
             font-size: 10.5px;
             font-weight: 900;
-            padding: 3px 6px;
-            border-top: 1px solid #000;
+            padding: 3px 7px 4px;
           }
-          /* ── RODAPÉ ── */
-          .f-footer {
-            display: flex;
-            height: 105px;
+
+          /* ── RODAPE ── */
+          #ficha-op .rodape {
+            display: grid;
+            grid-template-columns: 50% 50%;
+            height: 100px;
+            border-top: 2px solid #000;
           }
-          .f-descricao {
-            width: 50%;
-            border-right: 1px solid #000;
+          #ficha-op .desc-box {
+            border-right: 1.5px solid #000;
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
-            padding: 0 12px 6px;
+            padding: 0 10px 5px;
           }
-          .f-descricao-line {
-            border-top: 1px solid #000;
-            margin-bottom: 4px;
+          #ficha-op .desc-line {
+            border-top: 1.5px solid #000;
+            margin-bottom: 3px;
           }
-          .f-descricao-title {
+          #ficha-op .desc-label {
             font-size: 11px;
             font-weight: 900;
             text-align: center;
           }
-          .f-checks {
-            width: 50%;
+          #ficha-op .checks-box {
             display: flex;
             flex-direction: column;
-            justify-content: space-around;
-            padding: 8px 16px;
+            justify-content: space-evenly;
+            padding: 6px 16px;
           }
-          .f-check-row {
+          #ficha-op .check-row {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
           }
-          .f-check-col {
+          #ficha-op .boxes {
             display: flex;
             flex-direction: column;
             gap: 3px;
           }
-          .f-box {
-            width: 15px;
-            height: 15px;
-            border: 1px solid #000;
-            display: inline-block;
+          #ficha-op .caixa {
+            width: 14px;
+            height: 14px;
+            border: 1.5px solid #000;
           }
-          .f-check-lbl {
+          #ficha-op .check-lbl {
             font-size: 11px;
             font-weight: 900;
           }
         `}</style>
 
         {/* ── FICHA ── */}
-        <div id="ficha-impressao">
-          <div className="f-wrap">
+        <div id="ficha-op">
+          <div className="ficha">
 
-            {/* CORPO */}
-            <div className="f-body">
+            {/* TOPO */}
+            <div className="topo">
 
-              {/* Coluna Esquerda */}
-              <div className="f-col-left">
-                <div className="f-client">{createdPO.client.toUpperCase()}</div>
-                <div className="f-mid">
-                  <div className="f-color">{createdPO.color.toUpperCase()}</div>
-                  <div className="f-img-box" />
+              {/* esquerda */}
+              <div className="col-esq">
+                <div className="nome-cliente">{createdPO.client.toUpperCase()}</div>
+                <div className="linha-cor">
+                  <div className="cor-texto">{createdPO.color.toUpperCase()}</div>
+                  <div className="img-box" />
                 </div>
-                <div className="f-specs">
-                  {createdPO.items.map((item, i) => (
+                <div className="materiais">
+                  {createdPO.items.map((it, i) => (
                     <div key={i}>
-                      {item.material.toUpperCase()} : {item.quantity}
-                      {item.unit === 'metros' ? 'M' : item.unit === 'kg' ? 'KG' : 'UN'} OP- {item.individual_op}
+                      {it.material.toUpperCase()}: {it.quantity}
+                      {it.unit === 'metros' ? 'M' : it.unit === 'kg' ? 'KG' : 'UN'} OP- {it.individual_op}
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Coluna Direita */}
-              <div className="f-col-right">
-                <table className="f-info-table">
+              {/* direita */}
+              <div className="col-dir">
+                <table className="info-table">
                   <tbody>
-                    <tr>
-                      <td className="f-lbl">Nº PEDIDO</td>
-                      <td className="f-val">{createdPO.order_number || ''}</td>
-                    </tr>
-                    <tr>
-                      <td className="f-lbl">HORA</td>
-                      <td className="f-val">{horaAtual}</td>
-                    </tr>
-                    <tr>
-                      <td className="f-lbl">ENTRADA</td>
-                      <td className="f-val">{format(new Date(createdPO.entry_date), 'dd/MM/yy')}</td>
-                    </tr>
-                    <tr>
-                      <td className="f-lbl">RETORNO</td>
-                      <td className="f-val">{format(new Date(createdPO.expected_date), 'dd/MM/yy')}</td>
-                    </tr>
-                    <tr>
-                      <td className="f-lbl">CONF.</td>
-                      <td className="f-val"></td>
-                    </tr>
+                    <tr><td className="lbl">Nº PEDIDO</td><td className="val">{createdPO.order_number || ''}</td></tr>
+                    <tr><td className="lbl">HORA</td><td className="val">{horaAtual}</td></tr>
+                    <tr><td className="lbl">ENTRADA</td><td className="val">{fmtDate(createdPO.entry_date)}</td></tr>
+                    <tr><td className="lbl">RETORNO</td><td className="val">{fmtDate(createdPO.expected_date)}</td></tr>
+                    <tr><td className="lbl">CONF.</td><td className="val"></td></tr>
                   </tbody>
                 </table>
-
-                <div className="f-num-block">
-                  <div className="f-big-num">{diaRetorno}</div>
-                </div>
-
-                <div className="f-spec-label">ESPECIFICAÇÕES</div>
+                <div className="num-grande"><span>{diaRetorno}</span></div>
+                <div className="esp-label">ESPECIFICAÇÕES</div>
               </div>
             </div>
 
-            {/* RODAPÉ */}
-            <div className="f-footer">
-              <div className="f-descricao">
-                <div className="f-descricao-line" />
-                <div className="f-descricao-title">DESCRIÇÃO</div>
+            {/* RODAPE */}
+            <div className="rodape">
+              <div className="desc-box">
+                <div className="desc-line" />
+                <div className="desc-label">DESCRIÇÃO</div>
               </div>
-              <div className="f-checks">
-                <div className="f-check-row">
-                  <div className="f-check-col">
-                    <div className="f-box" />
-                    <div className="f-box" />
-                    <div className="f-box" />
+              <div className="checks-box">
+                <div className="check-row">
+                  <div className="boxes">
+                    <div className="caixa" />
+                    <div className="caixa" />
+                    <div className="caixa" />
                   </div>
-                  <span className="f-check-lbl">SOLIDEZ</span>
+                  <span className="check-lbl">SOLIDEZ</span>
                 </div>
-                <div className="f-check-row">
-                  <div className="f-check-col">
-                    <div className="f-box" />
-                    <div className="f-box" />
+                <div className="check-row">
+                  <div className="boxes">
+                    <div className="caixa" />
+                    <div className="caixa" />
                   </div>
-                  <span className="f-check-lbl">APROVAÇÃO</span>
+                  <span className="check-lbl">APROVAÇÃO</span>
                 </div>
               </div>
             </div>
@@ -584,12 +388,14 @@ export default function Almoxarifado() {
           </div>
         </div>
 
-        <p className="text-center text-gray-500 text-sm mt-4 print:hidden">Use Ctrl+P para imprimir · {createdPO.items.length} item(ns)</p>
+        <p className="text-center text-gray-400 text-sm mt-5 print:hidden">Ctrl+P para imprimir</p>
       </Layout>
     );
   }
 
-  // ─── FORMULÁRIO ──────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  //  FORMULÁRIO
+  // ═══════════════════════════════════════════════════════════
   return (
     <Layout>
       <div className="max-w-6xl mx-auto space-y-6">
@@ -600,23 +406,13 @@ export default function Almoxarifado() {
 
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-2">
           <div className="flex gap-2">
-            <button
-              onClick={() => { setView("new"); if (editingOP) handleNewPO(); }}
-              className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
-                view === "new" ? "bg-blue-500 text-white shadow-lg" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              <FilePlus className="w-5 h-5" />
-              {editingOP ? "Editar Ficha" : "Nova Ficha"}
+            <button onClick={() => { setView("new"); }}
+              className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${ view==="new" ? "bg-blue-500 text-white shadow-lg" : "bg-gray-100 text-gray-600 hover:bg-gray-200" }`}>
+              <FilePlus className="w-5 h-5" /> {editingOP ? "Editar Ficha" : "Nova Ficha"}
             </button>
-            <button
-              onClick={() => setView("manage")}
-              className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
-                view === "manage" ? "bg-blue-500 text-white shadow-lg" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              <Search className="w-5 h-5" />
-              Gerenciar Fichas
+            <button onClick={() => setView("manage")}
+              className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${ view==="manage" ? "bg-blue-500 text-white shadow-lg" : "bg-gray-100 text-gray-600 hover:bg-gray-200" }`}>
+              <Search className="w-5 h-5" /> Gerenciar Fichas
             </button>
           </div>
         </div>
@@ -625,66 +421,40 @@ export default function Almoxarifado() {
           <div className="space-y-6">
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Buscar por OP, cliente ou cor..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input type="text" placeholder="Buscar por OP, cliente ou cor..."
+                  value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
               </div>
             </div>
-
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">OP</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Cliente</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Cor</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Previsão</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ações</th>
+                      {["OP","Cliente","Cor","Status","Previsão","Ações"].map(h => (
+                        <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{h}</th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {filteredOPs.length > 0 ? (
-                      filteredOPs.map((op) => (
-                        <tr key={op.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="font-semibold text-blue-600">{op.op_number}</span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-gray-900">{op.client}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-gray-900">{op.color}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
-                              {getStatusLabel(op.status)}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                            {format(new Date(op.expected_date), "dd/MM/yyyy")}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center gap-2">
-                              <button onClick={() => handleEdit(op)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="Editar">
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                              <button onClick={() => handleReprint(op)} className="p-2 text-green-600 hover:bg-green-50 rounded-lg" title="Reimprimir">
-                                <Printer className="w-4 h-4" />
-                              </button>
-                              <button onClick={() => handleDelete(op)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg" title="Excluir">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={6} className="px-6 py-8 text-center text-gray-500">Nenhuma ficha encontrada</td>
+                    {filteredOPs.length > 0 ? filteredOPs.map(op => (
+                      <tr key={op.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 font-semibold text-blue-600">{op.op_number}</td>
+                        <td className="px-6 py-4">{op.client}</td>
+                        <td className="px-6 py-4">{op.color}</td>
+                        <td className="px-6 py-4"><span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">{getStatusLabel(op.status)}</span></td>
+                        <td className="px-6 py-4 text-sm text-gray-600">{format(new Date(op.expected_date), 'dd/MM/yyyy')}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex gap-2">
+                            <button onClick={() => handleEdit(op)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit2 className="w-4 h-4" /></button>
+                            <button onClick={() => handleReprint(op)} className="p-2 text-green-600 hover:bg-green-50 rounded-lg"><Printer className="w-4 h-4" /></button>
+                            <button onClick={() => handleDelete(op)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                          </div>
+                        </td>
                       </tr>
+                    )) : (
+                      <tr><td colSpan={6} className="px-6 py-8 text-center text-gray-500">Nenhuma ficha encontrada</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -693,51 +463,43 @@ export default function Almoxarifado() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Informações Básicas */}
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 space-y-6">
               <h2 className="text-xl font-bold text-gray-900 flex items-center">
-                <PackagePlus className="w-6 h-6 mr-2 text-blue-600" />
-                Informações Básicas
+                <PackagePlus className="w-6 h-6 mr-2 text-blue-600" /> Informações Básicas
               </h2>
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Cliente *</label>
-                  <input type="text" value={client} onChange={(e) => setClient(e.target.value.toUpperCase())}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 uppercase"
-                    placeholder="Nome do cliente" required />
+                  <input type="text" value={client} onChange={e => setClient(e.target.value.toUpperCase())}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 uppercase" placeholder="Nome do cliente" required />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Cor *</label>
-                  <input type="text" value={color} onChange={(e) => setColor(e.target.value.toUpperCase())}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 uppercase"
-                    placeholder="Nome da cor" required />
+                  <input type="text" value={color} onChange={e => setColor(e.target.value.toUpperCase())}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 uppercase" placeholder="Nome da cor" required />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Nº Pedido</label>
-                  <input type="text" value={orderNumber} onChange={(e) => setOrderNumber(e.target.value.toUpperCase())}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 uppercase"
-                    placeholder="Número do pedido" />
+                  <input type="text" value={orderNumber} onChange={e => setOrderNumber(e.target.value.toUpperCase())}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 uppercase" placeholder="Número do pedido" />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Data de Entrada *</label>
-                  <input type="date" value={entryDate} onChange={(e) => handleEntryDateChange(e.target.value)}
+                  <input type="date" value={entryDate} onChange={e => handleEntryDateChange(e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Previsão de Saída *</label>
-                  <input type="date" value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)}
+                  <input type="date" value={expectedDate} onChange={e => setExpectedDate(e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Regiões Importantes</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Regiões</label>
                   <div className="flex gap-4 items-center h-[50px] px-4 py-3 bg-orange-50 border border-orange-200 rounded-lg">
-                    {[{label:'Jaraguá', val: regionJaragua, set: setRegionJaragua},
-                      {label:'Brusque', val: regionBrusque, set: setRegionBrusque},
-                      {label:'Gaspar',  val: regionGaspar,  set: setRegionGaspar}].map(r => (
-                      <label key={r.label} className="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" checked={r.val} onChange={(e) => r.set(e.target.checked)}
-                          className="w-5 h-5 text-orange-600 border-orange-300 rounded" />
-                        <span className="text-sm font-semibold text-orange-700">{r.label}</span>
+                    {([['Jaraguá', regionJaragua, setRegionJaragua], ['Brusque', regionBrusque, setRegionBrusque], ['Gaspar', regionGaspar, setRegionGaspar]] as const).map(([lbl, val, set]) => (
+                      <label key={lbl as string} className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={val as boolean} onChange={e => (set as (v:boolean)=>void)(e.target.checked)} className="w-5 h-5 text-orange-600 rounded" />
+                        <span className="text-sm font-semibold text-orange-700">{lbl as string}</span>
                       </label>
                     ))}
                   </div>
@@ -745,47 +507,36 @@ export default function Almoxarifado() {
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Descrição</label>
-                <textarea value={description} onChange={(e) => setDescription(e.target.value.toUpperCase())}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 uppercase"
-                  rows={3} placeholder="Informações adicionais..." />
+                <textarea value={description} onChange={e => setDescription(e.target.value.toUpperCase())}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 uppercase" rows={3} placeholder="Informações adicionais..." />
               </div>
             </div>
 
-            {/* Itens da produção */}
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-gray-900">Itens da Produção</h2>
                 <button type="button" onClick={addItem}
-                  className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold transition-all shadow-md">
-                  <Plus className="w-5 h-5" />
-                  Adicionar Item
+                  className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold shadow-md">
+                  <Plus className="w-5 h-5" /> Adicionar Item
                 </button>
               </div>
-
               <div className="space-y-4">
                 {items.map((item, index) => (
                   <div key={item.tempId} className="p-4 border-2 border-gray-200 rounded-xl bg-gray-50">
-
-                    {/* Linha 1: material, qtd, unidade, OP, remover */}
                     <div className="grid grid-cols-12 gap-3 mb-3">
                       <div className="col-span-5">
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Material *</label>
-                        <input type="text" value={item.material}
-                          onChange={(e) => updateItem(item.tempId, "material", e.target.value.toUpperCase())}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm uppercase"
-                          placeholder="Ex: ELÁSTICO 10-20MM" required />
+                        <input type="text" value={item.material} onChange={e => updateItem(item.tempId, 'material', e.target.value.toUpperCase())}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm uppercase" placeholder="Ex: ELÁSTICO 10-20MM" required />
                       </div>
                       <div className="col-span-2">
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Qtd *</label>
-                        <input type="number" step="0.01" value={item.quantity}
-                          onChange={(e) => updateItem(item.tempId, "quantity", e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                          placeholder="100" required />
+                        <input type="number" step="0.01" value={item.quantity} onChange={e => updateItem(item.tempId, 'quantity', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="100" required />
                       </div>
                       <div className="col-span-2">
                         <label className="block text-xs font-semibold text-gray-600 mb-1">Un *</label>
-                        <select value={item.unit} onChange={(e) => updateItem(item.tempId, "unit", e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                        <select value={item.unit} onChange={e => updateItem(item.tempId, 'unit', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
                           <option value="metros">m</option>
                           <option value="unidades">un</option>
                           <option value="kg">kg</option>
@@ -794,9 +545,7 @@ export default function Almoxarifado() {
                       <div className="col-span-2">
                         <label className="block text-xs font-semibold text-gray-600 mb-1">OP</label>
                         <div className="px-2 py-2 border border-gray-200 rounded-lg bg-blue-50 text-sm text-blue-700 font-semibold text-center">
-                          {editingOP
-                            ? existingOPs.find(o => o.id === editingOP)?.op_number || ""
-                            : getItemOPNumber(index)}
+                          {editingOP ? existingOPs.find(o => o.id === editingOP)?.op_number || '' : getItemOPNumber(index)}
                         </div>
                       </div>
                       <div className="col-span-1 flex items-end">
@@ -806,51 +555,31 @@ export default function Almoxarifado() {
                         </button>
                       </div>
                     </div>
-
-                    {/* Linha 2: Lab, Malha e Fibras em linha separada */}
                     <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-gray-200">
                       <label className="flex items-center gap-1.5 cursor-pointer">
-                        <input type="checkbox" checked={item.requiresLab}
-                          onChange={(e) => updateItem(item.tempId, "requiresLab", e.target.checked)}
-                          className="w-4 h-4 text-purple-600 border-gray-300 rounded" />
+                        <input type="checkbox" checked={item.requiresLab} onChange={e => updateItem(item.tempId, 'requiresLab', e.target.checked)} className="w-4 h-4 text-purple-600 rounded" />
                         <span className="text-xs font-semibold text-purple-700">Laboratório</span>
                       </label>
                       <label className="flex items-center gap-1.5 cursor-pointer">
-                        <input type="checkbox" checked={item.requiresFabricQuality}
-                          onChange={(e) => updateItem(item.tempId, "requiresFabricQuality", e.target.checked)}
-                          className="w-4 h-4 text-teal-600 border-gray-300 rounded" />
+                        <input type="checkbox" checked={item.requiresFabricQuality} onChange={e => updateItem(item.tempId, 'requiresFabricQuality', e.target.checked)} className="w-4 h-4 text-teal-600 rounded" />
                         <span className="text-xs font-semibold text-teal-700">Qualidade de Malha</span>
                       </label>
-
-                      {/* Separador */}
                       <div className="h-4 w-px bg-gray-300" />
-
-                      {/* Fibras */}
                       <span className="text-xs font-semibold text-gray-500">Fibras (máx 2):</span>
                       {fibras.length === 0 ? (
                         <span className="text-xs text-gray-400 italic">Carregando...</span>
-                      ) : (
-                        fibras.map((fibra) => {
-                          const isSelected = item.selectedFibers.includes(fibra.id);
-                          const isDisabled = !isSelected && item.selectedFibers.length >= 2;
-                          return (
-                            <label key={fibra.id}
-                              className={`flex items-center gap-1.5 cursor-pointer ${
-                                isDisabled ? 'opacity-40 cursor-not-allowed' : ''
-                              }`}>
-                              <input type="checkbox" checked={isSelected} disabled={isDisabled}
-                                onChange={(e) => {
-                                  const newFibers = e.target.checked
-                                    ? [...item.selectedFibers, fibra.id]
-                                    : item.selectedFibers.filter(id => id !== fibra.id);
-                                  updateItem(item.tempId, "selectedFibers", newFibers);
-                                }}
-                                className="w-4 h-4 text-indigo-600 border-gray-300 rounded" />
-                              <span className="text-xs font-semibold text-indigo-700">{fibra.name}</span>
-                            </label>
-                          );
-                        })
-                      )}
+                      ) : fibras.map(fibra => {
+                        const sel = item.selectedFibers.includes(fibra.id);
+                        const dis = !sel && item.selectedFibers.length >= 2;
+                        return (
+                          <label key={fibra.id} className={`flex items-center gap-1.5 cursor-pointer ${dis ? 'opacity-40 cursor-not-allowed' : ''}`}>
+                            <input type="checkbox" checked={sel} disabled={dis}
+                              onChange={e => updateItem(item.tempId, 'selectedFibers', e.target.checked ? [...item.selectedFibers, fibra.id] : item.selectedFibers.filter(id => id !== fibra.id))}
+                              className="w-4 h-4 text-indigo-600 rounded" />
+                            <span className="text-xs font-semibold text-indigo-700">{fibra.name}</span>
+                          </label>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
@@ -859,14 +588,11 @@ export default function Almoxarifado() {
 
             <div className="flex justify-end gap-3">
               {editingOP && (
-                <button type="button" onClick={handleNewPO}
-                  className="bg-gray-500 hover:bg-gray-600 text-white px-8 py-4 rounded-lg font-semibold text-lg">
-                  Cancelar
-                </button>
+                <button type="button" onClick={handleNewPO} className="bg-gray-500 hover:bg-gray-600 text-white px-8 py-4 rounded-lg font-semibold text-lg">Cancelar</button>
               )}
               <button type="submit" disabled={loading}
-                className="bg-green-500 hover:bg-green-600 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-all shadow-lg disabled:opacity-50">
-                {loading ? "Processando..." : editingOP ? "Atualizar Ficha" : "Gerar Ficha de Produção"}
+                className="bg-green-500 hover:bg-green-600 text-white px-8 py-4 rounded-lg font-semibold text-lg shadow-lg disabled:opacity-50">
+                {loading ? 'Processando...' : editingOP ? 'Atualizar Ficha' : 'Gerar Ficha de Produção'}
               </button>
             </div>
           </form>
