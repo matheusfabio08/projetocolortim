@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { Plus, Trash2, PackagePlus, Printer, Search, Edit2, FilePlus } from "lucide-react";
 import { useAPI } from "@/hooks/useAPI";
-import { format, addBusinessDays } from "date-fns";
+import { format, addBusinessDays, parseISO } from "date-fns";
 
 interface Fibra { id: number; name: string; }
 interface Item {
@@ -26,6 +26,15 @@ interface ExistingPO {
   order_number: string | null; description: string | null;
   entry_date: string; expected_date: string; status: string; created_at: string;
 }
+
+// Converte qualquer formato de data ISO sem risco de fuso
+const safeParseDate = (d: string) => {
+  if (!d) return new Date();
+  // Se vier com 'T' e fuso, usa parseISO diretamente
+  if (d.includes('T')) return parseISO(d);
+  // Se vier apenas YYYY-MM-DD, força meio-dia local
+  return new Date(d + 'T12:00:00');
+};
 
 export default function Almoxarifado() {
   const { get, post, put, del } = useAPI();
@@ -100,8 +109,8 @@ export default function Almoxarifado() {
       const d = await get<any>(`/production-orders/${op.id}`);
       setEditingOP(op.id); setClient(d.client); setColor(d.color);
       setOrderNumber(d.order_number || ''); setDescription(d.description || '');
-      setEntryDate(new Date(d.entry_date).toISOString().split('T')[0]);
-      setExpectedDate(new Date(d.expected_date).toISOString().split('T')[0]);
+      setEntryDate(safeParseDate(d.entry_date).toISOString().split('T')[0]);
+      setExpectedDate(safeParseDate(d.expected_date).toISOString().split('T')[0]);
       setRegionJaragua(!!d.region_jaragua); setRegionBrusque(!!d.region_brusque); setRegionGaspar(!!d.region_gaspar);
       setItems(d.items.map((it: any) => { const f: number[] = []; if (it.fiber_id) f.push(it.fiber_id); if (it.fiber2_id) f.push(it.fiber2_id); return { id: it.id, material: it.material, quantity: String(it.quantity||''), unit: it.unit||'metros', requiresLab: !!it.requires_lab, requiresFabricQuality: !!it.requires_fabric_quality, selectedFibers: f, tempId: crypto.randomUUID() }; }));
       setView("new");
@@ -131,76 +140,89 @@ export default function Almoxarifado() {
 
   const getStatusLabel = (s: string) => ({ almoxarifado:'Almoxarifado', qualidade_malhas:'Qualidade de Malhas', laboratorio:'Laboratório', preparacao:'Preparação', producao:'Produção', secadora:'Secadora', destrinchagem:'Destrinchagem', enrolagem:'Enrolagem', qualidade:'Qualidade', concluido:'Concluído' }[s] || s);
 
-  // ═══════════════════════════════════════════════════════════
-  //  FICHA DE IMPRESSÃO — pixel-perfect igual imagem fornecida
-  // ═══════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════
+  //  FICHA DE IMPRESSÃO
+  // ═══════════════════════════════════════
   if (createdPO) {
     const horaAtual = format(new Date(), 'HH:mm');
-    const diaRetorno = format(new Date(createdPO.expected_date + 'T12:00:00'), 'dd');
-    const fmtDate = (d: string) => format(new Date(d + 'T12:00:00'), 'dd/MM/yy');
+    const expectedDateParsed = safeParseDate(createdPO.expected_date);
+    const entryDateParsed = safeParseDate(createdPO.entry_date);
+    const diaRetorno = format(expectedDateParsed, 'dd');
+    const fmtDate = (d: string) => format(safeParseDate(d), 'dd/MM/yy');
 
     return (
       <Layout>
-        {/* ── botões tela ── */}
+        {/* botões - só na tela */}
         <div className="max-w-4xl mx-auto mb-6 flex items-center justify-between print:hidden">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Ficha Gerada com Sucesso</h1>
             <p className="text-gray-500 text-sm mt-1">OP {createdPO.op_number} &middot; {createdPO.items.length} item(ns)</p>
           </div>
           <div className="flex gap-3">
-            <button onClick={() => window.print()} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-semibold">
+            <button
+              onClick={() => window.print()}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-semibold print:hidden">
               <Printer className="w-4 h-4" /> Imprimir
             </button>
-            <button onClick={handleNewPO} className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg font-semibold">Nova Ficha</button>
+            <button
+              onClick={handleNewPO}
+              className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg font-semibold print:hidden">
+              Nova Ficha
+            </button>
           </div>
         </div>
 
-        {/* ── estilos da ficha ── */}
+        {/*
+          CSS de impressão isolado:
+          Usamos uma classe específica .ficha-print-wrapper para não afetar
+          a visibilidade da página toda durante a navegação normal.
+          O @media print esconde tudo e exibe apenas o wrapper.
+        */}
         <style>{`
           @media print {
-            * { visibility: hidden !important; }
-            #ficha-op, #ficha-op * { visibility: visible !important; }
-            #ficha-op { position: fixed; inset: 0; display: flex; align-items: flex-start; justify-content: center; padding: 10mm; }
-            @page { size: A4 portrait; margin: 0; }
+            body > * { display: none !important; }
+            .ficha-print-wrapper { display: block !important; }
+            .ficha-print-wrapper * { visibility: visible !important; }
+            .print\\:hidden { display: none !important; }
+            @page { size: A4 portrait; margin: 8mm; }
           }
-
-          /* ── container ── */
-          #ficha-op .ficha {
+          .ficha-print-wrapper {
+            /* na tela normal nao interfere em nada */
+          }
+          /* ── FICHA ── */
+          .f-ficha {
             font-family: Arial, Helvetica, sans-serif;
             width: 190mm;
+            max-width: 100%;
             border: 2.5px solid #000;
             background: #fff;
             box-sizing: border-box;
+            margin: 0 auto;
           }
-
-          /* ── TOPO: duas colunas ── */
-          #ficha-op .topo {
+          .f-topo {
             display: grid;
             grid-template-columns: 60% 40%;
-            border-bottom: 2px solid #000;
           }
-
-          /* coluna esquerda do topo */
-          #ficha-op .col-esq {
+          /* col esquerda */
+          .f-col-esq {
             border-right: 2px solid #000;
             display: flex;
             flex-direction: column;
           }
-          #ficha-op .nome-cliente {
+          .f-nome-cliente {
             font-size: 32px;
             font-weight: 900;
             padding: 10px 12px;
             border-bottom: 1.5px solid #000;
             line-height: 1.1;
           }
-          /* linha cor + caixa imagem */
-          #ficha-op .linha-cor {
+          .f-linha-cor {
             display: grid;
             grid-template-columns: 1fr 90px;
             border-bottom: 1.5px solid #000;
             min-height: 90px;
           }
-          #ficha-op .cor-texto {
+          .f-cor-texto {
             font-size: 26px;
             font-weight: 900;
             display: flex;
@@ -209,132 +231,94 @@ export default function Almoxarifado() {
             padding: 8px;
             border-right: 1.5px solid #000;
           }
-          #ficha-op .img-box {
-            /* caixa vazia para amostra */
-            background: #fff;
-          }
-          /* area de materiais */
-          #ficha-op .materiais {
+          .f-img-box { background: #fff; }
+          .f-materiais {
             padding: 8px 10px;
             min-height: 70px;
             font-size: 10.5px;
             font-weight: 700;
             line-height: 1.7;
           }
-
-          /* coluna direita do topo */
-          #ficha-op .col-dir {
+          /* col direita */
+          .f-col-dir {
             display: flex;
             flex-direction: column;
           }
-          /* tabela info */
-          #ficha-op .info-table {
-            width: 100%;
-            border-collapse: collapse;
-          }
-          #ficha-op .info-table td {
-            height: 21px;
+          .f-info-table { width: 100%; border-collapse: collapse; }
+          .f-info-table td {
+            height: 22px;
             padding: 2px 7px;
             font-size: 10.5px;
             font-weight: 800;
             border-bottom: 1.5px solid #000;
-            border-right: 0;
           }
-          #ficha-op .info-table td.lbl {
+          .f-info-table td.f-lbl {
             width: 50%;
             border-right: 1.5px solid #000;
           }
-          #ficha-op .info-table td.val {
+          .f-info-table td.f-val {
             text-align: right;
             font-weight: 700;
-            font-size: 11px;
           }
-          /* numero grande */
-          #ficha-op .num-grande {
+          .f-num-grande {
             flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
             border-bottom: 1.5px solid #000;
-            padding: 6px 4px;
+            padding: 4px;
           }
-          #ficha-op .num-grande span {
+          .f-num-grande span {
             font-size: 100px;
             font-weight: 900;
             line-height: 1;
           }
-          /* label especificacoes */
-          #ficha-op .esp-label {
+          .f-esp-label {
             font-size: 10.5px;
             font-weight: 900;
             padding: 3px 7px 4px;
           }
-
-          /* ── RODAPE ── */
-          #ficha-op .rodape {
+          /* rodapé */
+          .f-rodape {
             display: grid;
             grid-template-columns: 50% 50%;
             height: 100px;
             border-top: 2px solid #000;
           }
-          #ficha-op .desc-box {
+          .f-desc-box {
             border-right: 1.5px solid #000;
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
             padding: 0 10px 5px;
           }
-          #ficha-op .desc-line {
-            border-top: 1.5px solid #000;
-            margin-bottom: 3px;
-          }
-          #ficha-op .desc-label {
-            font-size: 11px;
-            font-weight: 900;
-            text-align: center;
-          }
-          #ficha-op .checks-box {
+          .f-desc-line { border-top: 1.5px solid #000; margin-bottom: 3px; }
+          .f-desc-label { font-size: 11px; font-weight: 900; text-align: center; }
+          .f-checks-box {
             display: flex;
             flex-direction: column;
             justify-content: space-evenly;
             padding: 6px 16px;
           }
-          #ficha-op .check-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-          }
-          #ficha-op .boxes {
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-          }
-          #ficha-op .caixa {
-            width: 14px;
-            height: 14px;
-            border: 1.5px solid #000;
-          }
-          #ficha-op .check-lbl {
-            font-size: 11px;
-            font-weight: 900;
-          }
+          .f-check-row { display: flex; align-items: center; gap: 8px; }
+          .f-boxes { display: flex; flex-direction: column; gap: 3px; }
+          .f-caixa { width: 14px; height: 14px; border: 1.5px solid #000; }
+          .f-check-lbl { font-size: 11px; font-weight: 900; }
         `}</style>
 
-        {/* ── FICHA ── */}
-        <div id="ficha-op">
-          <div className="ficha">
-
+        {/* FICHA */}
+        <div className="ficha-print-wrapper">
+          <div className="f-ficha">
             {/* TOPO */}
-            <div className="topo">
-
+            <div className="f-topo">
               {/* esquerda */}
-              <div className="col-esq">
-                <div className="nome-cliente">{createdPO.client.toUpperCase()}</div>
-                <div className="linha-cor">
-                  <div className="cor-texto">{createdPO.color.toUpperCase()}</div>
-                  <div className="img-box" />
+              <div className="f-col-esq">
+                <div className="f-nome-cliente">{createdPO.client.toUpperCase()}</div>
+                <div className="f-linha-cor">
+                  <div className="f-cor-texto">{createdPO.color.toUpperCase()}</div>
+                  <div className="f-img-box" />
                 </div>
-                <div className="materiais">
+                <div className="f-materiais">
                   {createdPO.items.map((it, i) => (
                     <div key={i}>
                       {it.material.toUpperCase()}: {it.quantity}
@@ -343,48 +327,42 @@ export default function Almoxarifado() {
                   ))}
                 </div>
               </div>
-
               {/* direita */}
-              <div className="col-dir">
-                <table className="info-table">
+              <div className="f-col-dir">
+                <table className="f-info-table">
                   <tbody>
-                    <tr><td className="lbl">Nº PEDIDO</td><td className="val">{createdPO.order_number || ''}</td></tr>
-                    <tr><td className="lbl">HORA</td><td className="val">{horaAtual}</td></tr>
-                    <tr><td className="lbl">ENTRADA</td><td className="val">{fmtDate(createdPO.entry_date)}</td></tr>
-                    <tr><td className="lbl">RETORNO</td><td className="val">{fmtDate(createdPO.expected_date)}</td></tr>
-                    <tr><td className="lbl">CONF.</td><td className="val"></td></tr>
+                    <tr><td className="f-lbl">Nº PEDIDO</td><td className="f-val">{createdPO.order_number || ''}</td></tr>
+                    <tr><td className="f-lbl">HORA</td><td className="f-val">{horaAtual}</td></tr>
+                    <tr><td className="f-lbl">ENTRADA</td><td className="f-val">{fmtDate(createdPO.entry_date)}</td></tr>
+                    <tr><td className="f-lbl">RETORNO</td><td className="f-val">{fmtDate(createdPO.expected_date)}</td></tr>
+                    <tr><td className="f-lbl">CONF.</td><td className="f-val"></td></tr>
                   </tbody>
                 </table>
-                <div className="num-grande"><span>{diaRetorno}</span></div>
-                <div className="esp-label">ESPECIFICAÇÕES</div>
+                <div className="f-num-grande"><span>{diaRetorno}</span></div>
+                <div className="f-esp-label">ESPECIFICAÇÕES</div>
               </div>
             </div>
-
             {/* RODAPE */}
-            <div className="rodape">
-              <div className="desc-box">
-                <div className="desc-line" />
-                <div className="desc-label">DESCRIÇÃO</div>
+            <div className="f-rodape">
+              <div className="f-desc-box">
+                <div className="f-desc-line" />
+                <div className="f-desc-label">DESCRIÇÃO</div>
               </div>
-              <div className="checks-box">
-                <div className="check-row">
-                  <div className="boxes">
-                    <div className="caixa" />
-                    <div className="caixa" />
-                    <div className="caixa" />
+              <div className="f-checks-box">
+                <div className="f-check-row">
+                  <div className="f-boxes">
+                    <div className="f-caixa" /><div className="f-caixa" /><div className="f-caixa" />
                   </div>
-                  <span className="check-lbl">SOLIDEZ</span>
+                  <span className="f-check-lbl">SOLIDEZ</span>
                 </div>
-                <div className="check-row">
-                  <div className="boxes">
-                    <div className="caixa" />
-                    <div className="caixa" />
+                <div className="f-check-row">
+                  <div className="f-boxes">
+                    <div className="f-caixa" /><div className="f-caixa" />
                   </div>
-                  <span className="check-lbl">APROVAÇÃO</span>
+                  <span className="f-check-lbl">APROVAÇÃO</span>
                 </div>
               </div>
             </div>
-
           </div>
         </div>
 
@@ -393,9 +371,9 @@ export default function Almoxarifado() {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════
   //  FORMULÁRIO
-  // ═══════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════
   return (
     <Layout>
       <div className="max-w-6xl mx-auto space-y-6">
@@ -403,15 +381,14 @@ export default function Almoxarifado() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Almoxarifado</h1>
           <p className="text-gray-600">Gerenciar fichas de produção</p>
         </div>
-
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-2">
           <div className="flex gap-2">
-            <button onClick={() => { setView("new"); }}
-              className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${ view==="new" ? "bg-blue-500 text-white shadow-lg" : "bg-gray-100 text-gray-600 hover:bg-gray-200" }`}>
+            <button onClick={() => setView("new")}
+              className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${view==="new" ? "bg-blue-500 text-white shadow-lg" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
               <FilePlus className="w-5 h-5" /> {editingOP ? "Editar Ficha" : "Nova Ficha"}
             </button>
             <button onClick={() => setView("manage")}
-              className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${ view==="manage" ? "bg-blue-500 text-white shadow-lg" : "bg-gray-100 text-gray-600 hover:bg-gray-200" }`}>
+              className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${view==="manage" ? "bg-blue-500 text-white shadow-lg" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
               <Search className="w-5 h-5" /> Gerenciar Fichas
             </button>
           </div>
@@ -431,11 +408,9 @@ export default function Almoxarifado() {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50">
-                    <tr>
-                      {["OP","Cliente","Cor","Status","Previsão","Ações"].map(h => (
-                        <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{h}</th>
-                      ))}
-                    </tr>
+                    <tr>{["OP","Cliente","Cor","Status","Previsão","Ações"].map(h => (
+                      <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{h}</th>
+                    ))}</tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {filteredOPs.length > 0 ? filteredOPs.map(op => (
@@ -444,7 +419,7 @@ export default function Almoxarifado() {
                         <td className="px-6 py-4">{op.client}</td>
                         <td className="px-6 py-4">{op.color}</td>
                         <td className="px-6 py-4"><span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">{getStatusLabel(op.status)}</span></td>
-                        <td className="px-6 py-4 text-sm text-gray-600">{format(new Date(op.expected_date), 'dd/MM/yyyy')}</td>
+                        <td className="px-6 py-4 text-sm text-gray-600">{format(safeParseDate(op.expected_date), 'dd/MM/yyyy')}</td>
                         <td className="px-6 py-4">
                           <div className="flex gap-2">
                             <button onClick={() => handleEdit(op)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit2 className="w-4 h-4" /></button>
