@@ -8,7 +8,7 @@ const router = Router();
 
 const BoxSchema = z.object({
   po_id: z.number(),
-  employee_id: z.string(),
+  employee_id: z.number(),
   has_adjustment: z.boolean().default(false),
   adjustment_details: z.string().optional(),
   is_reprocess: z.boolean().default(false),
@@ -95,7 +95,7 @@ async function processBox(
       stage: boxName,
       action: 'processed',
       userId: req.user!.id,
-      details: `Processado em ${boxName} por ${d.employee_id}`,
+      details: `Processado em ${boxName} por funcionário ${d.employee_id}`,
     },
   });
 
