@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 
@@ -48,23 +49,39 @@ async function processBox(
   }
   const d = v.data;
 
-  // Usa dados tipados diretamente por modelo para evitar erro de tipo do Prisma
-  const createData = {
-    opId: d.po_id,
-    employeeId: d.employee_id,
-    hasAdjustment: d.has_adjustment,
-    adjustmentDetails: d.adjustment_details ?? null,
-    isReprocess: d.is_reprocess,
-    reprocessReason: d.reprocess_reason ?? null,
-    timestamp: d.timestamp,
-  };
-
   if (boxName === 'box4') {
-    await prisma.poBox4.create({ data: createData });
+    const data: Prisma.PoBox4UncheckedCreateInput = {
+      opId: d.po_id,
+      employeeId: d.employee_id,
+      hasAdjustment: d.has_adjustment,
+      adjustmentDetails: d.adjustment_details ?? null,
+      isReprocess: d.is_reprocess,
+      reprocessReason: d.reprocess_reason ?? null,
+      timestamp: d.timestamp,
+    };
+    await prisma.poBox4.create({ data });
   } else if (boxName === 'box5') {
-    await prisma.poBox5.create({ data: createData });
+    const data: Prisma.PoBox5UncheckedCreateInput = {
+      opId: d.po_id,
+      employeeId: d.employee_id,
+      hasAdjustment: d.has_adjustment,
+      adjustmentDetails: d.adjustment_details ?? null,
+      isReprocess: d.is_reprocess,
+      reprocessReason: d.reprocess_reason ?? null,
+      timestamp: d.timestamp,
+    };
+    await prisma.poBox5.create({ data });
   } else {
-    await prisma.poBox6.create({ data: createData });
+    const data: Prisma.PoBox6UncheckedCreateInput = {
+      opId: d.po_id,
+      employeeId: d.employee_id,
+      hasAdjustment: d.has_adjustment,
+      adjustmentDetails: d.adjustment_details ?? null,
+      isReprocess: d.is_reprocess,
+      reprocessReason: d.reprocess_reason ?? null,
+      timestamp: d.timestamp,
+    };
+    await prisma.poBox6.create({ data });
   }
 
   await prisma.productionOrder.update({
