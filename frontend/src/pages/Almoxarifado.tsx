@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { Plus, Trash2, PackagePlus, Printer, Search, Edit2, FilePlus } from "lucide-react";
 import { useAPI } from "@/hooks/useAPI";
-import { format, addBusinessDays, parseISO } from "date-fns";
+import { format, addBusinessDays, isValid } from "date-fns";
 
 interface Fibra { id: number; name: string; }
 interface Item {
@@ -27,13 +27,32 @@ interface ExistingPO {
   entry_date: string; expected_date: string; status: string; created_at: string;
 }
 
-// Converte qualquer formato de data ISO sem risco de fuso
-const safeParseDate = (d: string) => {
+/**
+ * Converte qualquer valor de data vindo da API em um Date válido.
+ * Suporta: ISO completo, YYYY-MM-DD, Date object, null/undefined.
+ */
+const safeParseDate = (d: unknown): Date => {
   if (!d) return new Date();
-  // Se vier com 'T' e fuso, usa parseISO diretamente
-  if (d.includes('T')) return parseISO(d);
-  // Se vier apenas YYYY-MM-DD, força meio-dia local
-  return new Date(d + 'T12:00:00');
+  if (d instanceof Date) return isValid(d) ? d : new Date();
+  const str = String(d).trim();
+  if (!str) return new Date();
+  // tenta parsear diretamente
+  const direct = new Date(str);
+  if (isValid(direct)) return direct;
+  // tenta como data local (YYYY-MM-DD)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    const local = new Date(str + 'T12:00:00');
+    if (isValid(local)) return local;
+  }
+  return new Date();
+};
+
+const fmtDate = (d: unknown) => {
+  try { return format(safeParseDate(d), 'dd/MM/yy'); } catch { return ''; }
+};
+
+const fmtDateLong = (d: unknown) => {
+  try { return format(safeParseDate(d), 'dd/MM/yyyy'); } catch { return ''; }
 };
 
 export default function Almoxarifado() {
@@ -66,12 +85,12 @@ export default function Almoxarifado() {
   useEffect(() => { if (view === "manage") fetchExistingOPs(); }, [view]);
 
   const fetchFibras = async () => { try { setFibras(await get<Fibra[]>("/fibras")); } catch { /* ignore */ } };
-  const fetchNextOPNumber = async () => { try { const r = await get<{next_op_number:string}>("/production-orders/next-op-number"); setNextOPNumber(r.next_op_number); } catch { /* ignore */ } };
+  const fetchNextOPNumber = async () => { try { const r = await get<{ next_op_number: string }>("/production-orders/next-op-number"); setNextOPNumber(r.next_op_number); } catch { /* ignore */ } };
   const fetchExistingOPs = async () => { try { setExistingOPs(await get<ExistingPO[]>("/production-orders")); } catch { /* ignore */ } };
   const getItemOPNumber = (i: number) => String(parseInt(nextOPNumber) + i).padStart(3, '0');
   const addItem = () => setItems([...items, { material: "", quantity: "", unit: "metros", requiresLab: false, requiresFabricQuality: false, selectedFibers: [], tempId: crypto.randomUUID() }]);
   const removeItem = (t: string) => { if (items.length > 1) setItems(items.filter(i => i.tempId !== t)); };
-  const updateItem = (t: string, f: keyof Item, v: unknown) => setItems(items.map(i => i.tempId === t ? {...i, [f]: v} : i));
+  const updateItem = (t: string, f: keyof Item, v: unknown) => setItems(items.map(i => i.tempId === t ? { ...i, [f]: v } : i));
 
   const buildPayload = () => ({
     client: client.toUpperCase(), color: color.toUpperCase(),
@@ -97,7 +116,7 @@ export default function Almoxarifado() {
         setCreatedPO(await get<CreatedPO>(`/production-orders/${editingOP}`));
         setEditingOP(null);
       } else {
-        const r = await post<{id:number}>("/production-orders", buildPayload());
+        const r = await post<{ id: number }>("/production-orders", buildPayload());
         setCreatedPO(await get<CreatedPO>(`/production-orders/${r.id}`));
       }
     } catch { alert(editingOP ? "Erro ao atualizar ficha" : "Erro ao criar ficha"); }
@@ -112,7 +131,12 @@ export default function Almoxarifado() {
       setEntryDate(safeParseDate(d.entry_date).toISOString().split('T')[0]);
       setExpectedDate(safeParseDate(d.expected_date).toISOString().split('T')[0]);
       setRegionJaragua(!!d.region_jaragua); setRegionBrusque(!!d.region_brusque); setRegionGaspar(!!d.region_gaspar);
-      setItems(d.items.map((it: any) => { const f: number[] = []; if (it.fiber_id) f.push(it.fiber_id); if (it.fiber2_id) f.push(it.fiber2_id); return { id: it.id, material: it.material, quantity: String(it.quantity||''), unit: it.unit||'metros', requiresLab: !!it.requires_lab, requiresFabricQuality: !!it.requires_fabric_quality, selectedFibers: f, tempId: crypto.randomUUID() }; }));
+      setItems(d.items.map((it: any) => {
+        const f: number[] = [];
+        if (it.fiber_id) f.push(it.fiber_id);
+        if (it.fiber2_id) f.push(it.fiber2_id);
+        return { id: it.id, material: it.material, quantity: String(it.quantity || ''), unit: it.unit || 'metros', requiresLab: !!it.requires_lab, requiresFabricQuality: !!it.requires_fabric_quality, selectedFibers: f, tempId: crypto.randomUUID() };
+      }));
       setView("new");
     } catch { alert("Erro ao carregar OP"); }
   };
@@ -128,7 +152,7 @@ export default function Almoxarifado() {
     setEntryDate(new Date().toISOString().split('T')[0]);
     setExpectedDate(addBusinessDays(new Date(), 5).toISOString().split('T')[0]);
     setRegionJaragua(false); setRegionBrusque(false); setRegionGaspar(false);
-    setItems([{ material:'', quantity:'', unit:'metros', requiresLab:false, requiresFabricQuality:false, selectedFibers:[], tempId:crypto.randomUUID() }]);
+    setItems([{ material: '', quantity: '', unit: 'metros', requiresLab: false, requiresFabricQuality: false, selectedFibers: [], tempId: crypto.randomUUID() }]);
     fetchNextOPNumber();
   };
 
@@ -138,58 +162,38 @@ export default function Almoxarifado() {
     op.color.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getStatusLabel = (s: string) => ({ almoxarifado:'Almoxarifado', qualidade_malhas:'Qualidade de Malhas', laboratorio:'Laboratório', preparacao:'Preparação', producao:'Produção', secadora:'Secadora', destrinchagem:'Destrinchagem', enrolagem:'Enrolagem', qualidade:'Qualidade', concluido:'Concluído' }[s] || s);
+  const getStatusLabel = (s: string) => (({ almoxarifado: 'Almoxarifado', qualidade_malhas: 'Qualidade de Malhas', laboratorio: 'Laboratório', preparacao: 'Preparação', producao: 'Produção', secadora: 'Secadora', destrinchagem: 'Destrinchagem', enrolagem: 'Enrolagem', qualidade: 'Qualidade', concluido: 'Concluído' } as Record<string, string>)[s] || s);
 
   // ═══════════════════════════════════════
   //  FICHA DE IMPRESSÃO
   // ═══════════════════════════════════════
   if (createdPO) {
     const horaAtual = format(new Date(), 'HH:mm');
-    const expectedDateParsed = safeParseDate(createdPO.expected_date);
-    const entryDateParsed = safeParseDate(createdPO.entry_date);
-    const diaRetorno = format(expectedDateParsed, 'dd');
-    const fmtDate = (d: string) => format(safeParseDate(d), 'dd/MM/yy');
+    const diaRetorno = (() => { try { return format(safeParseDate(createdPO.expected_date), 'dd'); } catch { return '--'; } })();
 
     return (
       <Layout>
-        {/* botões - só na tela */}
         <div className="max-w-4xl mx-auto mb-6 flex items-center justify-between print:hidden">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Ficha Gerada com Sucesso</h1>
             <p className="text-gray-500 text-sm mt-1">OP {createdPO.op_number} &middot; {createdPO.items.length} item(ns)</p>
           </div>
           <div className="flex gap-3">
-            <button
-              onClick={() => window.print()}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-semibold print:hidden">
+            <button onClick={() => window.print()} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-semibold print:hidden">
               <Printer className="w-4 h-4" /> Imprimir
             </button>
-            <button
-              onClick={handleNewPO}
-              className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg font-semibold print:hidden">
-              Nova Ficha
-            </button>
+            <button onClick={handleNewPO} className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg font-semibold print:hidden">Nova Ficha</button>
           </div>
         </div>
 
-        {/*
-          CSS de impressão isolado:
-          Usamos uma classe específica .ficha-print-wrapper para não afetar
-          a visibilidade da página toda durante a navegação normal.
-          O @media print esconde tudo e exibe apenas o wrapper.
-        */}
         <style>{`
           @media print {
             body > * { display: none !important; }
             .ficha-print-wrapper { display: block !important; }
             .ficha-print-wrapper * { visibility: visible !important; }
-            .print\\:hidden { display: none !important; }
+            .print-hidden { display: none !important; }
             @page { size: A4 portrait; margin: 8mm; }
           }
-          .ficha-print-wrapper {
-            /* na tela normal nao interfere em nada */
-          }
-          /* ── FICHA ── */
           .f-ficha {
             font-family: Arial, Helvetica, sans-serif;
             width: 190mm;
@@ -199,139 +203,54 @@ export default function Almoxarifado() {
             box-sizing: border-box;
             margin: 0 auto;
           }
-          .f-topo {
-            display: grid;
-            grid-template-columns: 60% 40%;
-          }
-          /* col esquerda */
-          .f-col-esq {
-            border-right: 2px solid #000;
-            display: flex;
-            flex-direction: column;
-          }
-          .f-nome-cliente {
-            font-size: 32px;
-            font-weight: 900;
-            padding: 10px 12px;
-            border-bottom: 1.5px solid #000;
-            line-height: 1.1;
-          }
-          .f-linha-cor {
-            display: grid;
-            grid-template-columns: 1fr 90px;
-            border-bottom: 1.5px solid #000;
-            min-height: 90px;
-          }
-          .f-cor-texto {
-            font-size: 26px;
-            font-weight: 900;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 8px;
-            border-right: 1.5px solid #000;
-          }
+          .f-topo { display: grid; grid-template-columns: 60% 40%; }
+          .f-col-esq { border-right: 2px solid #000; display: flex; flex-direction: column; }
+          .f-nome-cliente { font-size: 32px; font-weight: 900; padding: 10px 12px; border-bottom: 1.5px solid #000; line-height: 1.1; }
+          .f-linha-cor { display: grid; grid-template-columns: 1fr 90px; border-bottom: 1.5px solid #000; min-height: 90px; }
+          .f-cor-texto { font-size: 26px; font-weight: 900; display: flex; align-items: center; justify-content: center; padding: 8px; border-right: 1.5px solid #000; }
           .f-img-box { background: #fff; }
-          .f-materiais {
-            padding: 8px 10px;
-            min-height: 70px;
-            font-size: 10.5px;
-            font-weight: 700;
-            line-height: 1.7;
-          }
-          /* col direita */
-          .f-col-dir {
-            display: flex;
-            flex-direction: column;
-          }
+          .f-materiais { padding: 8px 10px; min-height: 70px; font-size: 10.5px; font-weight: 700; line-height: 1.7; }
+          .f-col-dir { display: flex; flex-direction: column; }
           .f-info-table { width: 100%; border-collapse: collapse; }
-          .f-info-table td {
-            height: 22px;
-            padding: 2px 7px;
-            font-size: 10.5px;
-            font-weight: 800;
-            border-bottom: 1.5px solid #000;
-          }
-          .f-info-table td.f-lbl {
-            width: 50%;
-            border-right: 1.5px solid #000;
-          }
-          .f-info-table td.f-val {
-            text-align: right;
-            font-weight: 700;
-          }
-          .f-num-grande {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-bottom: 1.5px solid #000;
-            padding: 4px;
-          }
-          .f-num-grande span {
-            font-size: 100px;
-            font-weight: 900;
-            line-height: 1;
-          }
-          .f-esp-label {
-            font-size: 10.5px;
-            font-weight: 900;
-            padding: 3px 7px 4px;
-          }
-          /* rodapé */
-          .f-rodape {
-            display: grid;
-            grid-template-columns: 50% 50%;
-            height: 100px;
-            border-top: 2px solid #000;
-          }
-          .f-desc-box {
-            border-right: 1.5px solid #000;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-            padding: 0 10px 5px;
-          }
+          .f-info-table td { height: 22px; padding: 2px 7px; font-size: 10.5px; font-weight: 800; border-bottom: 1.5px solid #000; }
+          .f-info-table td.f-lbl { width: 50%; border-right: 1.5px solid #000; }
+          .f-info-table td.f-val { text-align: right; font-weight: 700; }
+          .f-num-grande { flex: 1; display: flex; align-items: center; justify-content: center; border-bottom: 1.5px solid #000; padding: 4px; }
+          .f-num-grande span { font-size: 100px; font-weight: 900; line-height: 1; }
+          .f-esp-label { font-size: 10.5px; font-weight: 900; padding: 3px 7px 4px; }
+          .f-rodape { display: grid; grid-template-columns: 50% 50%; height: 100px; border-top: 2px solid #000; }
+          .f-desc-box { border-right: 1.5px solid #000; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 10px 5px; }
           .f-desc-line { border-top: 1.5px solid #000; margin-bottom: 3px; }
           .f-desc-label { font-size: 11px; font-weight: 900; text-align: center; }
-          .f-checks-box {
-            display: flex;
-            flex-direction: column;
-            justify-content: space-evenly;
-            padding: 6px 16px;
-          }
+          .f-checks-box { display: flex; flex-direction: column; justify-content: space-evenly; padding: 6px 16px; }
           .f-check-row { display: flex; align-items: center; gap: 8px; }
           .f-boxes { display: flex; flex-direction: column; gap: 3px; }
           .f-caixa { width: 14px; height: 14px; border: 1.5px solid #000; }
           .f-check-lbl { font-size: 11px; font-weight: 900; }
         `}</style>
 
-        {/* FICHA */}
         <div className="ficha-print-wrapper">
           <div className="f-ficha">
-            {/* TOPO */}
             <div className="f-topo">
-              {/* esquerda */}
               <div className="f-col-esq">
-                <div className="f-nome-cliente">{createdPO.client.toUpperCase()}</div>
+                <div className="f-nome-cliente">{createdPO.client?.toUpperCase() ?? ''}</div>
                 <div className="f-linha-cor">
-                  <div className="f-cor-texto">{createdPO.color.toUpperCase()}</div>
+                  <div className="f-cor-texto">{createdPO.color?.toUpperCase() ?? ''}</div>
                   <div className="f-img-box" />
                 </div>
                 <div className="f-materiais">
-                  {createdPO.items.map((it, i) => (
+                  {(createdPO.items ?? []).map((it, i) => (
                     <div key={i}>
-                      {it.material.toUpperCase()}: {it.quantity}
-                      {it.unit === 'metros' ? 'M' : it.unit === 'kg' ? 'KG' : 'UN'} OP- {it.individual_op}
+                      {it.material?.toUpperCase() ?? ''}: {it.quantity ?? ''}
+                      {it.unit === 'metros' ? 'M' : it.unit === 'kg' ? 'KG' : 'UN'} OP- {it.individual_op ?? ''}
                     </div>
                   ))}
                 </div>
               </div>
-              {/* direita */}
               <div className="f-col-dir">
                 <table className="f-info-table">
                   <tbody>
-                    <tr><td className="f-lbl">Nº PEDIDO</td><td className="f-val">{createdPO.order_number || ''}</td></tr>
+                    <tr><td className="f-lbl">Nº PEDIDO</td><td className="f-val">{createdPO.order_number ?? ''}</td></tr>
                     <tr><td className="f-lbl">HORA</td><td className="f-val">{horaAtual}</td></tr>
                     <tr><td className="f-lbl">ENTRADA</td><td className="f-val">{fmtDate(createdPO.entry_date)}</td></tr>
                     <tr><td className="f-lbl">RETORNO</td><td className="f-val">{fmtDate(createdPO.expected_date)}</td></tr>
@@ -342,7 +261,6 @@ export default function Almoxarifado() {
                 <div className="f-esp-label">ESPECIFICAÇÕES</div>
               </div>
             </div>
-            {/* RODAPE */}
             <div className="f-rodape">
               <div className="f-desc-box">
                 <div className="f-desc-line" />
@@ -350,15 +268,11 @@ export default function Almoxarifado() {
               </div>
               <div className="f-checks-box">
                 <div className="f-check-row">
-                  <div className="f-boxes">
-                    <div className="f-caixa" /><div className="f-caixa" /><div className="f-caixa" />
-                  </div>
+                  <div className="f-boxes"><div className="f-caixa" /><div className="f-caixa" /><div className="f-caixa" /></div>
                   <span className="f-check-lbl">SOLIDEZ</span>
                 </div>
                 <div className="f-check-row">
-                  <div className="f-boxes">
-                    <div className="f-caixa" /><div className="f-caixa" />
-                  </div>
+                  <div className="f-boxes"><div className="f-caixa" /><div className="f-caixa" /></div>
                   <span className="f-check-lbl">APROVAÇÃO</span>
                 </div>
               </div>
@@ -384,11 +298,11 @@ export default function Almoxarifado() {
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-2">
           <div className="flex gap-2">
             <button onClick={() => setView("new")}
-              className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${view==="new" ? "bg-blue-500 text-white shadow-lg" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+              className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${view === "new" ? "bg-blue-500 text-white shadow-lg" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
               <FilePlus className="w-5 h-5" /> {editingOP ? "Editar Ficha" : "Nova Ficha"}
             </button>
             <button onClick={() => setView("manage")}
-              className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${view==="manage" ? "bg-blue-500 text-white shadow-lg" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+              className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${view === "manage" ? "bg-blue-500 text-white shadow-lg" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
               <Search className="w-5 h-5" /> Gerenciar Fichas
             </button>
           </div>
@@ -408,7 +322,7 @@ export default function Almoxarifado() {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50">
-                    <tr>{["OP","Cliente","Cor","Status","Previsão","Ações"].map(h => (
+                    <tr>{["OP", "Cliente", "Cor", "Status", "Previsão", "Ações"].map(h => (
                       <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{h}</th>
                     ))}</tr>
                   </thead>
@@ -419,7 +333,7 @@ export default function Almoxarifado() {
                         <td className="px-6 py-4">{op.client}</td>
                         <td className="px-6 py-4">{op.color}</td>
                         <td className="px-6 py-4"><span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">{getStatusLabel(op.status)}</span></td>
-                        <td className="px-6 py-4 text-sm text-gray-600">{format(safeParseDate(op.expected_date), 'dd/MM/yyyy')}</td>
+                        <td className="px-6 py-4 text-sm text-gray-600">{fmtDateLong(op.expected_date)}</td>
                         <td className="px-6 py-4">
                           <div className="flex gap-2">
                             <button onClick={() => handleEdit(op)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit2 className="w-4 h-4" /></button>
@@ -473,7 +387,7 @@ export default function Almoxarifado() {
                   <div className="flex gap-4 items-center h-[50px] px-4 py-3 bg-orange-50 border border-orange-200 rounded-lg">
                     {([['Jaraguá', regionJaragua, setRegionJaragua], ['Brusque', regionBrusque, setRegionBrusque], ['Gaspar', regionGaspar, setRegionGaspar]] as const).map(([lbl, val, set]) => (
                       <label key={lbl as string} className="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" checked={val as boolean} onChange={e => (set as (v:boolean)=>void)(e.target.checked)} className="w-5 h-5 text-orange-600 rounded" />
+                        <input type="checkbox" checked={val as boolean} onChange={e => (set as (v: boolean) => void)(e.target.checked)} className="w-5 h-5 text-orange-600 rounded" />
                         <span className="text-sm font-semibold text-orange-700">{lbl as string}</span>
                       </label>
                     ))}
