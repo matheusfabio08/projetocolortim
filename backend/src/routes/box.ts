@@ -51,7 +51,7 @@ async function processBox(
 
   if (boxName === 'box4') {
     const data: Prisma.PoBox4UncheckedCreateInput = {
-      opId: d.po_id,
+      poId: d.po_id,
       employeeId: d.employee_id,
       hasAdjustment: d.has_adjustment,
       adjustmentDetails: d.adjustment_details ?? null,
@@ -62,7 +62,7 @@ async function processBox(
     await prisma.poBox4.create({ data });
   } else if (boxName === 'box5') {
     const data: Prisma.PoBox5UncheckedCreateInput = {
-      opId: d.po_id,
+      poId: d.po_id,
       employeeId: d.employee_id,
       hasAdjustment: d.has_adjustment,
       adjustmentDetails: d.adjustment_details ?? null,
@@ -73,7 +73,7 @@ async function processBox(
     await prisma.poBox5.create({ data });
   } else {
     const data: Prisma.PoBox6UncheckedCreateInput = {
-      opId: d.po_id,
+      poId: d.po_id,
       employeeId: d.employee_id,
       hasAdjustment: d.has_adjustment,
       adjustmentDetails: d.adjustment_details ?? null,
