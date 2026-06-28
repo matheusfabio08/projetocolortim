@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Truck, Plus, Search, Download } from 'lucide-react'
+import { Truck, Plus, Search } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import Layout from '@/components/Layout'
@@ -18,6 +18,7 @@ interface OutputEntry {
   quantity_kg: number
   boxes: number
   shipped_at: string
+  created_at: string
   created_by_name?: string
 }
 
@@ -65,6 +66,11 @@ export default function ListaSaida() {
 
   const totalKg    = filtered.reduce((s, e) => s + (e.quantity_kg || 0), 0)
   const totalBoxes = filtered.reduce((s, e) => s + (e.boxes || 0), 0)
+
+  function getEntryDate(e: OutputEntry): Date {
+    const raw = e.shipped_at || e.created_at
+    return raw ? new Date(raw) : new Date()
+  }
 
   return (
     <Layout>
@@ -125,7 +131,7 @@ export default function ListaSaida() {
                       <td className="px-3 py-2 tabular-nums font-medium">{e.quantity_kg?.toFixed(3)}</td>
                       <td className="px-3 py-2 tabular-nums">{e.boxes}</td>
                       <td className="px-3 py-2 whitespace-nowrap text-gray-500">
-                        {format(new Date(e.shipped_at || e.created_at ?? Date.now()), 'dd/MM/yyyy', { locale: ptBR })}
+                        {format(getEntryDate(e), 'dd/MM/yyyy', { locale: ptBR })}
                       </td>
                     </tr>
                   )) : <tr><td colSpan={9} className="px-3 py-8 text-center text-gray-500">Nenhuma saída registrada</td></tr>}
