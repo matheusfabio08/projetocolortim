@@ -1,14 +1,16 @@
 /*
-  FichaProducao.css
-  Fonte: engenharia reversa pixel-perfect de 532E32DA.jpg  (981 × 711 px)
+  FichaProducao.css — RESET TOTAL
+  Todas as células são position:absolute + overflow:hidden
+  NENHUM texto é posicionado solto no canvas raiz
 
-  GRID VERTICAL:    x = 0 | 350 | 673 | 813 | 978
-  GRID HORIZONTAL:  y = 0 | 40 | 72 | 100 | 127 | 158 | 328 | 379 | 555 | 631 | 656 | 707
+  Baseado em 532E32DA.jpg (981×711px):
+    Grid X: 0 | 350 | 673 | 812 | 981
+    Grid Y: 0 | 158 | 328 | 379 | 555 | 631 | 707
 */
 
-/* ================================================================
+/* ==========================================================
    CANVAS
-================================================================ */
+========================================================== */
 .fp {
   position: relative;
   width: 981px;
@@ -16,49 +18,51 @@
   background: #fff;
   border: 2px solid #000;
   font-family: Arial, Helvetica, sans-serif;
+  box-sizing: border-box;
   flex-shrink: 0;
   overflow: hidden;
 }
-.fp, .fp * { box-sizing: border-box; }
+.fp * {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
-/* ================================================================
-   1. NOME CLIENTE  x=0,y=0,w=673,h=379
-      border-right x=673 | border-bottom y=379
-================================================================ */
-.fp-nome {
+/* ==========================================================
+   HELPER: célula base
+========================================================== */
+.fp-cell {
   position: absolute;
-  left: 0; top: 0;
-  width: 673px; height: 379px;
+  overflow: hidden;
   border-right: 2px solid #000;
   border-bottom: 2px solid #000;
-  padding-left: 18px;
-  padding-top: 34px;
+}
+
+/* ==========================================================
+   NOME CLIENTE
+   x=0, y=0, w=673, h=158
+========================================================== */
+.fp-nome {
+  left: 0; top: 0;
+  width: 673px; height: 158px;
+  display: flex;
+  align-items: flex-start;
+  padding: 12px 10px 4px 18px;
 }
 .fp-nome > span {
-  font-size: 45px;
+  font-size: 38px;
   font-weight: 900;
-  line-height: 1.1;
+  line-height: 1.15;
   color: #000;
-  display: block;
+  word-break: break-word;
 }
 
-/* ================================================================
-   Divisor vertical interno  x=350, y=0..379
-================================================================ */
-.fp-vline350 {
-  position: absolute;
-  left: 350px; top: 0;
-  width: 2px; height: 379px;
-  background: #000;
-}
-
-/* ================================================================
-   2. COR  x=0,y=158,w=350,h=221
-      (sem borda própria — dentro da .fp-nome)
-      cy texto=232, cy célula=244
-================================================================ */
+/* ==========================================================
+   COR
+   x=0, y=158, w=350, h=221
+   (termina em y=379)
+========================================================== */
 .fp-cor {
-  position: absolute;
   left: 0; top: 158px;
   width: 350px; height: 221px;
   display: flex;
@@ -67,209 +71,217 @@
   padding-left: 18px;
 }
 .fp-cor > span {
-  font-size: 45px;
+  font-size: 38px;
   font-weight: 900;
   color: #000;
   line-height: 1;
 }
 
-/* ================================================================
-   3. MATERIAIS  x=0,y=379,w=673,h=176
-      border-right x=673 | border-bottom y=555
-================================================================ */
+/* ==========================================================
+   BRANCO (vazio)
+   x=350, y=158, w=323, h=221
+========================================================== */
+.fp-branco {
+  left: 350px; top: 158px;
+  width: 323px; height: 221px;
+  border-right: none;
+}
+
+/* ==========================================================
+   MATERIAIS
+   x=0, y=379, w=673, h=176
+========================================================== */
 .fp-mat {
-  position: absolute;
   left: 0; top: 379px;
   width: 673px; height: 176px;
-  border-right: 2px solid #000;
-  border-bottom: 2px solid #000;
-  padding-left: 7px;
-  padding-top: 4px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: 8px 10px 4px 10px;
+  gap: 6px;
 }
 .fp-mat p {
-  font-size: 22px;
+  font-size: 16px;
   font-weight: 700;
   color: #000;
-  line-height: 1;
-  margin: 0;
-}
-.fp-mat p + p { margin-top: 10px; }
-
-/* ================================================================
-   4. TABELA DIREITA  x=673,y=0,w=308,h=158
-      col label x=673 w=140 | col valor x=813 w=165
-      separador vertical x=813 (2px)
-================================================================ */
-.fp-tl,
-.fp-tv {
-  position: absolute;
-  display: flex;
-  align-items: center;
-  border-bottom: 2px solid #000;
-}
-.fp-tl {
-  left: 673px;
-  width: 140px;
-  border-right: 2px solid #000;
-  padding-left: 6px;
-}
-.fp-tv {
-  left: 813px;
-  width: 165px;
-  justify-content: flex-end;
-  padding-right: 30px;
-}
-.fp-tl span, .fp-tv span {
-  font-weight: 900;
-  color: #000;
-  font-size: 30px;
-  line-height: 1;
-}
-
-/* Nº PEDIDO: pad-top=13px, font=22px (célula h=40) */
-.fp-r1 { top: 0;    height: 40px; }
-.fp-r1 .fp-tl > span, .fp-r1 span { font-size: 22px; }
-.fp-tl.fp-r1 { padding-top: 13px; align-items: flex-start; }
-
-.fp-r2 { top: 40px;  height: 32px; }
-.fp-r2 span { font-size: 33px; }
-
-.fp-r3 { top: 72px;  height: 28px; }
-.fp-r4 { top: 100px; height: 27px; }
-.fp-r5 { top: 127px; height: 31px; }
-.fp-tl.fp-r5 { padding-left: 5px; }
-
-/* ================================================================
-   5. NÚMERO GRANDE  x=673,y=158,w=305,h=170
-      border-bottom y=328
-================================================================ */
-.fp-numero {
-  position: absolute;
-  left: 673px; top: 158px;
-  width: 305px; height: 170px;
-  border-bottom: 2px solid #000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  line-height: 1.3;
+  white-space: nowrap;
   overflow: hidden;
-}
-.fp-numero > span {
-  font-size: 125px;
-  font-weight: 900;
-  line-height: 1;
-  color: #000;
+  text-overflow: ellipsis;
 }
 
-/* ================================================================
-   6. ESPECIFICAÇÕES  x=673,y=328,w=305,h=227
-      border-bottom y=555
-================================================================ */
-.fp-especif {
-  position: absolute;
-  left: 673px; top: 328px;
-  width: 305px; height: 227px;
-  border-bottom: 2px solid #000;
-  padding: 4px 6px;
-}
-.fp-especif > span {
-  font-size: 18px;
-  font-weight: 700;
-  color: #000;
-  display: block;
-  line-height: 1.4;
-}
-
-/* ================================================================
-   7. CAIXINHAS SOLIDEZ  x=350, w=51
-      bordas em y=555,581,607,631
-      border-right x=401
-================================================================ */
-.fp-box {
-  position: absolute;
-  left: 350px;
-  width: 51px;
-  border-right: 2px solid #000;
-  border-bottom: 2px solid #000;
-}
-.fp-bs1 { top: 555px; height: 26px; }
-.fp-bs2 { top: 581px; height: 26px; }
-.fp-bs3 { top: 607px; height: 24px; border-bottom: none; }
-
-.fp-solidez-label {
-  position: absolute;
-  left: 406px;
-  top: 562px;
-  font-size: 17px;
-  font-weight: 900;
-  color: #000;
-  line-height: 1;
-}
-
-/* ================================================================
-   8. CAIXINHAS APROVAÇÃO  x=350, w=51
-      bordas em y=632,656,682,707
-================================================================ */
-.fp-ba1 { top: 632px; height: 24px; }
-.fp-ba2 { top: 657px; height: 24px; }
-.fp-ba3 { top: 682px; height: 25px; border-bottom: none; }
-
-.fp-aprov-label {
-  position: absolute;
-  left: 409px;
-  top: 663px;
-  font-size: 17px;
-  font-weight: 900;
-  color: #000;
-  line-height: 1;
-}
-
-/* ================================================================
-   9. DESCRIÇÃO  x=0,y=555,w=350,h=152
-      border-right x=350
-      ::before = linha horizontal y=631 (x=0..401)
-================================================================ */
+/* ==========================================================
+   DESCRIÇÃO
+   x=0, y=555, w=350, h=152
+   ::after = underline no topo da área de assinatura
+========================================================== */
 .fp-descricao {
-  position: absolute;
   left: 0; top: 555px;
   width: 350px; height: 152px;
-  border-right: 2px solid #000;
+  border-bottom: none;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 10px;
 }
-/* linha horizontal y=631 relativo: 631-555=76px */
 .fp-descricao::before {
   content: '';
   position: absolute;
-  left: 0; top: 76px;
-  width: 401px;  /* x=0..401 */
+  left: 20px; right: 20px;
+  top: 50px;
   height: 2px;
   background: #000;
 }
-/* label DESCRIÇÃO centralizado abaixo da linha y=631 */
-/* texto em y=637..650, cx=176 */
 .fp-descricao > span {
-  position: absolute;
-  top: 78px;       /* 2px abaixo da linha */
-  left: 0;
-  width: 350px;
-  text-align: center;
-  font-size: 17px;
+  font-size: 14px;
   font-weight: 700;
+  color: #000;
+  line-height: 1;
+  text-align: center;
+}
+
+/* ==========================================================
+   CAIXINHAS (SOLIDEZ + APROVAÇÃO)
+   x=350, y=555, w=323, h=152
+========================================================== */
+.fp-caixinhas {
+  left: 350px; top: 555px;
+  width: 323px; height: 152px;
+  border-right: none;
+  border-bottom: none;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  padding: 8px 0 0 4px;
+  gap: 0;
+}
+
+/* Coluna das caixinhas */
+.fp-solidez-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+}
+.fp-box {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #000;
+  flex-shrink: 0;
+}
+
+/* Coluna dos labels */
+.fp-labels-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 90px;
+  padding-left: 8px;
+  padding-top: 0;
+}
+.fp-solidez-lbl,
+.fp-aprov-lbl {
+  font-size: 13px;
+  font-weight: 900;
+  color: #000;
+  line-height: 1;
+  white-space: nowrap;
+}
+/* APROVAÇÃO fica na posição vertical correspondente à 3ª caixinha */
+.fp-aprov-lbl {
+  margin-top: 10px;
+}
+
+/* ==========================================================
+   TABELA DIREITA  (Nº PEDIDO / HORA / ENTRADA / RETORNO / CONF.)
+   x=673, y=0, w=308, h=158
+   2 colunas: label w=139 | valor w=169
+========================================================== */
+.fp-tabela {
+  position: absolute;
+  left: 673px; top: 0;
+  width: 308px; height: 158px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.fp-tr {
+  display: flex;
+  flex: 1;
+  border-bottom: 2px solid #000;
+}
+.fp-tr-last {
+  border-bottom: none;
+}
+.fp-tl {
+  width: 139px;
+  flex-shrink: 0;
+  border-right: 2px solid #000;
+  font-size: 13px;
+  font-weight: 900;
+  color: #000;
+  display: flex;
+  align-items: center;
+  padding-left: 5px;
+  line-height: 1;
+  overflow: hidden;
+}
+.fp-tv {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 900;
+  color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 8px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* ==========================================================
+   NÚMERO GRANDE
+   x=673, y=158, w=308, h=170
+========================================================== */
+.fp-numero {
+  left: 673px; top: 158px;
+  width: 308px; height: 170px;
+  border-right: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.fp-numero > span {
+  font-size: 110px;
+  font-weight: 900;
   color: #000;
   line-height: 1;
 }
 
-/* ================================================================
-   10. BORDA DIREITA labels  x=673,y=555,h=156
-================================================================ */
-.fp-borda-dir {
-  position: absolute;
-  left: 671px; top: 555px;
-  width: 2px; height: 156px;
-  background: #000;
+/* ==========================================================
+   ESPECIFICAÇÕES
+   x=673, y=328, w=308, h=379
+   (ocupa até o fim: 328+379=707)
+========================================================== */
+.fp-especif {
+  left: 673px; top: 328px;
+  width: 308px; height: 379px;
+  border-right: none;
+  border-bottom: none;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding: 4px 6px;
+}
+.fp-especif > span {
+  font-size: 14px;
+  font-weight: 700;
+  color: #000;
 }
 
-/* ================================================================
+/* ==========================================================
    IMPRESSÃO
-================================================================ */
+========================================================== */
 @media print {
   .fp {
     -webkit-print-color-adjust: exact;
