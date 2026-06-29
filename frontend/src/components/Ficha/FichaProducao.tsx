@@ -28,42 +28,57 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
 }) => (
   <div className="fp">
 
-    {/* COL ESQUERDA: x=0..673 */}
-    {/* ROW 1 (y=0..158): NOME */}
+    {/* NOME  x=0,y=0,w=673,h=158 */}
     <div className="fp-cell fp-nome">
       <span>{nomeCliente}</span>
     </div>
 
-    {/* ROW 2 (y=158..379): COR | BRANCO */}
+    {/* COR  x=0,y=158,w=350,h=221 */}
     <div className="fp-cell fp-cor">
       <span>{cor}</span>
     </div>
+
+    {/* BRANCO  x=350,y=158,w=323,h=221 */}
     <div className="fp-cell fp-branco" />
 
-    {/* ROW 3 (y=379..555): MATERIAIS */}
+    {/* MATERIAIS  x=0,y=379,w=673,h=176 */}
     <div className="fp-cell fp-mat">
       {materiais.map((m, i) => <p key={i}>{m}</p>)}
     </div>
 
-    {/* ROW 4 (y=555..707): DESCRIÇÃO | CAIXINHAS */}
+    {/* DESCRIÇÃO  x=0,y=555,w=350,h=152 */}
     <div className="fp-cell fp-descricao">
-      {/* underline gerado por ::after */}
       <span>DESCRIÇÃO</span>
     </div>
+
+    {/*
+      CAIXINHAS  x=350,y=555,w=323,h=152
+      Layout da referência (05C9D2AB):
+        [□] SOLIDEZ      ← 3 caixas, label na 1ª
+        [□]
+        [□]
+        [□] APROVAÇÃO   ← 3 caixas, label na 4ª (contínuo)
+        [□]
+        [□]
+    */}
     <div className="fp-cell fp-caixinhas">
-      <div className="fp-solidez-col">
+      {/* Coluna esquerda: 6 caixas empilhadas (3+3) */}
+      <div className="fp-boxes-col">
+        <div className="fp-box" />
+        <div className="fp-box" />
+        <div className="fp-box fp-box-gap" />
         <div className="fp-box" />
         <div className="fp-box" />
         <div className="fp-box" />
       </div>
+      {/* Coluna direita: labels alinhados com 1ª e 4ª caixa */}
       <div className="fp-labels-col">
         <span className="fp-solidez-lbl">SOLIDEZ</span>
         <span className="fp-aprov-lbl">APROVAÇÃO</span>
       </div>
     </div>
 
-    {/* COL DIREITA: x=673..981 */}
-    {/* ROW 1 (y=0..158): TABELA Nº/HORA/ENTRADA/RETORNO/CONF */}
+    {/* TABELA  x=673,y=0,w=308,h=158 */}
     <div className="fp-tabela">
       <div className="fp-tr">
         <div className="fp-tl">Nº PEDIDO</div>
@@ -87,12 +102,12 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
       </div>
     </div>
 
-    {/* ROW 2 (y=158..328): NÚMERO GRANDE */}
+    {/* NÚMERO GRANDE  x=673,y=158,w=308,h=170 */}
     <div className="fp-cell fp-numero">
       <span>{numero}</span>
     </div>
 
-    {/* ROW 3 (y=328..555): ESPECIFICAÇÕES */}
+    {/* ESPECIFICAÇÕES  x=673,y=328,w=308,h=379 */}
     <div className="fp-cell fp-especif">
       <span>{especificacoes}</span>
     </div>
