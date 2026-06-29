@@ -1,25 +1,14 @@
 /*
-  FichaProducao.css — pixel-perfect
-  Canvas: 981 × 711 px
+  FichaProducao.css
+  Baseado em engenharia reversa pixel-perfect de image.jpg (986x711px)
 
-  Grid de linhas estruturais (medidas direto da imagem):
-  Verticais:    x = 0 | 350 | 673 | 813 | 978
-  Horizontais:  y = 0 | 40 | 72 | 100 | 127 | 158 | 328 | 379 | 555 | 631 | 656 | 707
-
-  Fontes (medidas reais):
-    NOME CLIENTE / COR    → 47px bold 900
-    MATERIAIS             → 45px bold 700  ← era 13px ERRADO
-    Nº PEDIDO label       → 22px bold
-    HORA/ENTRADA/etc lbl  → 31-34px bold
-    Valores tabela        → 34px bold
-    NÚMERO GRANDE         → 128px bold 900
-    ESPECIFICAÇÕES        → 24px bold
-    SOLIDEZ / APROVAÇÃO   → 18px bold      ← era 13px ERRADO
-    DESCRIÇÃO label       → 18px bold
+  GRID:
+  Verticais:   x=1 | 352 | 401 | 675 | 814 | 871 | 980
+  Horizontais: y=0 | 41 | 73 | 101 | 128 | 159 | 329 | 380 | 430 | 556 | 632 | 657 | 708
 */
 
 .fp {
-  width: 981px;
+  width: 986px;
   height: 711px;
   position: relative;
   background: #fff;
@@ -27,25 +16,24 @@
   font-family: Arial, Helvetica, sans-serif;
   flex-shrink: 0;
 }
-.fp, .fp * {
-  box-sizing: border-box;
-}
+.fp, .fp * { box-sizing: border-box; }
 
 /* ═══════════════════════════════════════════════════
-   ÁREA TOPO ESQUERDA  x=0,y=0,w=673,h=379
+   1. ÁREA ESQUERDA SUPERIOR  x=1,y=0, w=351,h=380
+   border-right x=352, border-bottom y=380
 ═══════════════════════════════════════════════════ */
-.fp__area-topo {
+.fp__area-esq {
   position: absolute;
-  left: 0; top: 0;
-  width: 673px; height: 379px;
+  left: 1px; top: 0;
+  width: 351px; height: 380px;
   border-right: 2px solid #000;
   border-bottom: 2px solid #000;
 }
 
-/* Linha vertical interna x=350, y=0..379 */
-.fp__v350 {
+/* divisor vertical interno x=352 (rel: 351px), y=0..380 */
+.fp__div-v {
   position: absolute;
-  left: 350px; top: 0;
+  left: 351px; top: 0;
   width: 2px; height: 100%;
   background: #000;
 }
@@ -54,146 +42,61 @@
 .fp__nome {
   position: absolute;
   left: 0; top: 0;
-  width: 350px;
-  padding-left: 18px;
-  padding-top: 34px;
+  width: 351px;
+  padding-left: 10px;
+  padding-top: 36px;
 }
 .fp__nome span {
-  font-size: 47px;
+  font-size: 43px;
   font-weight: 900;
   line-height: 1.1;
   color: #000;
   display: block;
 }
 
-/* COR — centralizado na sub-área x=0..350, y=158..379 */
+/* COR — sub-área x=1..352, y=159..380 */
+/* padding-top: 58px a partir de y=159 */
 .fp__cor {
   position: absolute;
-  left: 0; top: 158px;
-  width: 350px; height: 171px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  left: 0; top: 159px;
+  width: 351px; height: 221px;
+  padding-left: 10px;
+  padding-top: 58px;
 }
 .fp__cor span {
-  font-size: 47px;
+  font-size: 45px;
   font-weight: 900;
   color: #000;
+  display: block;
 }
 
 /* ═══════════════════════════════════════════════════
-   MATERIAIS  x=0,y=379,w=673,h=176
+   2. MATERIAIS  x=1,y=380, w=674,h=176
+   border-right x=675, border-bottom y=556
 ═══════════════════════════════════════════════════ */
 .fp__materiais {
   position: absolute;
-  left: 0; top: 379px;
-  width: 673px; height: 176px;
+  left: 1px; top: 380px;
+  width: 674px; height: 176px;
   border-right: 2px solid #000;
   border-bottom: 2px solid #000;
-  padding-left: 7px;
+  padding-left: 8px;
   padding-top: 4px;
 }
 .fp__materiais p {
-  font-size: 45px;
+  font-size: 22px;
   font-weight: 700;
   line-height: 1.0;
   color: #000;
   margin: 0;
 }
+.fp__materiais p + p { margin-top: 10px; }
 
 /* ═══════════════════════════════════════════════════
-   RODAPÉ ESQUERDO  x=0,y=555,w=350,h=156
-   Estrutura:
-     y=555..631  vazio superior
-     y=631 linha (x=0..400) — gerada pela borda das caixinhas
-     y=631..711  label DESCRIÇÃO centralizado
-═══════════════════════════════════════════════════ */
-.fp__rodape-esq {
-  position: absolute;
-  left: 0; top: 555px;
-  width: 350px; height: 156px;
-  border-right: 2px solid #000;
-}
-
-/* Linha interna em y=631 (relativo: 631-555=76px) */
-.fp__rodape-esq::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 76px;
-  width: 400px;   /* vai até x=400 no canvas = 400-0=400px */
-  height: 2px;
-  background: #000;
-}
-
-/* Label DESCRIÇÃO — centralizado abaixo da linha y=631 */
-.fp__descricao-label {
-  position: absolute;
-  left: 0; top: 78px;     /* abaixo da linha y=631 */
-  width: 350px; height: 78px;  /* até y=707 = 711-4border */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.fp__descricao-label span {
-  font-size: 18px;
-  font-weight: 900;
-  color: #000;
-}
-
-/* ═══════════════════════════════════════════════════
-   CAIXINHAS SOLIDEZ  x=350,w=48
-═══════════════════════════════════════════════════ */
-.fp__box {
-  position: absolute;
-  left: 350px;
-  width: 48px;
-  border-right: 2px solid #000;
-  border-bottom: 2px solid #000;
-}
-.fp__bs1 { top: 555px; height: 25px; }
-.fp__bs2 { top: 580px; height: 25px; }
-.fp__bs3 { top: 605px; height: 26px; border-bottom: none; }
-
-/* SOLIDEZ label — y=562, x=402 */
-.fp__label-solidez {
-  position: absolute;
-  left: 402px;
-  top: 562px;
-  font-size: 18px;
-  font-weight: 900;
-  color: #000;
-  line-height: 1;
-}
-
-/* ═══════════════════════════════════════════════════
-   CAIXINHAS APROVAÇÃO  x=350,w=48
-═══════════════════════════════════════════════════ */
-.fp__ba1 { top: 631px; height: 25px; }
-.fp__ba2 { top: 656px; height: 55px; border-bottom: none; }
-
-/* APROVAÇÃO label — y=663, x=402 */
-.fp__label-aprov {
-  position: absolute;
-  left: 402px;
-  top: 663px;
-  font-size: 17px;
-  font-weight: 900;
-  color: #000;
-  line-height: 1;
-}
-
-/* Borda direita da área de labels x=673,y=555,h=156 */
-.fp__labels-borda {
-  position: absolute;
-  left: 671px; top: 555px;
-  width: 2px; height: 156px;
-  background: #000;
-}
-
-/* ═══════════════════════════════════════════════════
-   TABELA DIREITA  x=673..978, y=0..158
-   Labels:  x=673..813  w=140
-   Valores: x=813..978  w=165
+   3. TABELA DIREITA  x=675,y=0, w=305,h=159
+   col label: x=675, w=139
+   col valor: x=814, w=166
+   separador vertical x=814 (2px)
 ═══════════════════════════════════════════════════ */
 .fp__tl,
 .fp__tv {
@@ -203,49 +106,44 @@
   border-bottom: 2px solid #000;
 }
 .fp__tl {
-  left: 673px;
-  width: 140px;
+  left: 675px;
+  width: 139px;
   border-right: 2px solid #000;
   padding-left: 6px;
+  padding-top: 1px;
 }
 .fp__tv {
-  left: 813px;
-  width: 165px;
+  left: 814px;
+  width: 166px;
   justify-content: flex-end;
-  padding-right: 30px;
 }
 
-/* Alturas e tops de cada linha */
-.fp__r1 { top: 0px;   height: 40px; }
-.fp__r2 { top: 40px;  height: 32px; }
-.fp__r3 { top: 72px;  height: 28px; }
-.fp__r4 { top: 100px; height: 27px; }
-.fp__r5 { top: 127px; height: 31px; }
+.fp__r1 { top: 0px;   height: 41px; }
+.fp__r2 { top: 41px;  height: 32px; }
+.fp__r3 { top: 73px;  height: 28px; }
+.fp__r4 { top: 101px; height: 27px; }
+.fp__r5 { top: 128px; height: 31px; }
 
 .fp__lbl {
-  font-size: 32px;
   font-weight: 900;
   color: #000;
   line-height: 1;
 }
-/* Nº PEDIDO tem fonte menor (célula h=40, mas texto menor) */
-.fp__lbl--sm {
-  font-size: 22px;
-}
-
 .fp__val {
-  font-size: 34px;
-  font-weight: 800;
+  font-size: 22px;
+  font-weight: 900;
   color: #000;
   line-height: 1;
+  padding-right: 6px;
 }
 
 /* ═══════════════════════════════════════════════════
-   NÚMERO GRANDE  x=673,y=158,w=305,h=170
+   4. NÚMERO GRANDE  x=675,y=159, w=305,h=170
+   border-bottom y=329
 ═══════════════════════════════════════════════════ */
 .fp__numero {
   position: absolute;
-  left: 673px; top: 158px;
+  left: 675px; top: 159px;
   width: 305px; height: 170px;
   border-bottom: 2px solid #000;
   display: flex;
@@ -254,29 +152,180 @@
   overflow: hidden;
 }
 .fp__numero span {
-  font-size: 128px;
+  font-size: 125px;
   font-weight: 900;
   line-height: 1;
   color: #000;
 }
 
 /* ═══════════════════════════════════════════════════
-   ESPECIFICAÇÕES  x=673,y=328,w=305,h=227
+   5. AMIDO  x=675,y=329, w=305,h=51
+   border-bottom y=380
+═══════════════════════════════════════════════════ */
+.fp__amido {
+  position: absolute;
+  left: 675px; top: 329px;
+  width: 305px; height: 51px;
+  border-bottom: 2px solid #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.fp__amido span {
+  font-size: 19px;
+  font-weight: 900;
+  color: #000;
+}
+
+/* ═══════════════════════════════════════════════════
+   6. SIM / NÃO  x=675,y=380, w=305,h=50
+   border-bottom y=430
+   divisor interno x=871 (2px)
+═══════════════════════════════════════════════════ */
+.fp__sim-nao {
+  position: absolute;
+  left: 675px; top: 380px;
+  width: 305px; height: 50px;
+  border-bottom: 2px solid #000;
+}
+
+/* checkbox SIM: x=679,y=382, w=42,h=40 */
+.fp__checkbox {
+  position: absolute;
+  width: 42px; height: 40px;
+  border: 2px solid #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.fp__checkbox--sim { left: 4px; top: 2px; }
+/* checkbox NÃO: x=830,y=382 → relativo: x=155,y=2 */
+.fp__checkbox--nao { left: 155px; top: 2px; }
+
+.fp__check-mark {
+  font-size: 20px;
+  font-weight: 900;
+  color: #000;
+}
+
+/* label SIM: x=738 → relativo: x=63 */
+.fp__sim-label {
+  position: absolute;
+  left: 63px; top: 9px;
+  font-size: 22px;
+  font-weight: 900;
+  color: #000;
+}
+
+/* divisor vertical x=871 → relativo: x=196 */
+.fp__div-sim-nao {
+  position: absolute;
+  left: 196px; top: 0;
+  width: 2px; height: 100%;
+  background: #000;
+}
+
+/* label NÃO: x=880 → relativo: x=205 */
+.fp__nao-label {
+  position: absolute;
+  left: 214px; top: 14px;
+  font-size: 23px;
+  font-weight: 900;
+  color: #000;
+}
+
+/* ═══════════════════════════════════════════════════
+   7. ESPECIFICAÇÕES  x=675,y=430, w=305,h=126
+   border-bottom y=556
 ═══════════════════════════════════════════════════ */
 .fp__especificacoes {
   position: absolute;
-  left: 673px; top: 328px;
-  width: 305px; height: 227px;
+  left: 675px; top: 430px;
+  width: 305px; height: 126px;
   border-bottom: 2px solid #000;
-  padding-top: 4px;
-  padding-left: 6px;
+  padding: 4px 6px;
 }
 .fp__especificacoes span {
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 700;
   color: #000;
   display: block;
-  line-height: 1.4;
+}
+
+/* ═══════════════════════════════════════════════════
+   8. CAIXINHAS SOLIDEZ  x=352,y=556, w=49
+   3 caixas: h=26 cada (y=556,582,607,632)
+   border-right x=401 (2px)
+═══════════════════════════════════════════════════ */
+.fp__box {
+  position: absolute;
+  left: 352px;
+  width: 49px;
+  border-right: 2px solid #000;
+  border-bottom: 2px solid #000;
+}
+/* SOLIDEZ */
+.fp__bs1 { top: 556px; height: 26px; }
+.fp__bs2 { top: 582px; height: 25px; }
+.fp__bs3 { top: 607px; height: 25px; border-bottom: none; }
+
+.fp__label-solidez {
+  position: absolute;
+  left: 406px;
+  top: 563px;
+  font-size: 18px;
+  font-weight: 900;
+  color: #000;
+  line-height: 1;
+}
+
+/* ═══════════════════════════════════════════════════
+   9. CAIXINHAS APROVAÇÃO  x=352,y=632, w=49
+   3 caixas: h=25 cada (y=632,657,682,708)
+═══════════════════════════════════════════════════ */
+.fp__ba1 { top: 632px; height: 25px; }
+.fp__ba2 { top: 657px; height: 25px; }
+.fp__ba3 { top: 682px; height: 26px; border-bottom: none; }
+
+.fp__label-aprov {
+  position: absolute;
+  left: 407px;
+  top: 661px;
+  font-size: 20px;
+  font-weight: 900;
+  color: #000;
+  line-height: 1;
+}
+
+/* ═══════════════════════════════════════════════════
+   10. BORDA DIREITA DOS LABELS  x=675,y=556, h=155
+═══════════════════════════════════════════════════ */
+.fp__borda-dir-labels {
+  position: absolute;
+  left: 673px; top: 556px;
+  width: 2px; height: 155px;
+  background: #000;
+}
+
+/* ═══════════════════════════════════════════════════
+   11. DESCRIÇÃO  x=1,y=632, w=351,h=76
+   border-right x=352
+   texto y=637..655 (h=19px → 26px)
+   cx=114
+═══════════════════════════════════════════════════ */
+.fp__descricao {
+  position: absolute;
+  left: 1px; top: 632px;
+  width: 351px; height: 76px;
+  border-right: 2px solid #000;
+  padding-left: 113px;
+  padding-top: 5px;
+}
+.fp__descricao span {
+  font-size: 26px;
+  font-weight: 700;
+  color: #000;
+  line-height: 1;
 }
 
 /* ═══════════════════════════════════════════════════
