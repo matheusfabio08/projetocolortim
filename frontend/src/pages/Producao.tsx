@@ -166,14 +166,20 @@ export default function Producao() {
         </div>
       </div>
 
-      {/* MODAL FICHA DE PRODUÇÃO */}
+      {/* ── MODAL FICHA DE PRODUÇÃO ── */}
       {fichaEntry && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 print:bg-transparent print:p-0 print:block">
-          <div className="bg-white rounded-2xl shadow-2xl overflow-auto max-h-[95vh] print:rounded-none print:shadow-none print:max-h-none print:overflow-visible">
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center overflow-auto py-6 print:bg-transparent print:p-0 print:block print:overflow-visible">
+          {/* overlay fecha o modal */}
+          <div className="absolute inset-0 print:hidden" onClick={() => setFichaEntry(null)} />
+
+          {/* container: largura exata da ficha (986px) + barra de ações */}
+          <div className="relative z-10 flex flex-col print:block" style={{ width: '986px' }}>
 
             {/* Barra de ações — oculta na impressão */}
-            <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200 print:hidden">
-              <span className="font-semibold text-gray-700">Ficha de Produção — OP {fichaEntry.op_number}</span>
+            <div className="flex items-center justify-between px-4 py-2 bg-white rounded-t-xl border-b border-gray-200 shadow print:hidden">
+              <span className="font-semibold text-gray-700 text-sm">
+                Ficha de Produção — OP {fichaEntry.op_number}
+              </span>
               <div className="flex items-center gap-2">
                 <button onClick={handlePrint}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-red-900 hover:bg-red-950 rounded-lg transition-colors">
@@ -186,8 +192,8 @@ export default function Producao() {
               </div>
             </div>
 
-            {/* FICHA */}
-            <div className="p-6 print:p-0">
+            {/* FICHA — sem padding, tamanho fixo 986x711 */}
+            <div className="print:p-0">
               <FichaProducao
                 nomeCliente={fichaEntry.client}
                 cor={fichaEntry.color}
