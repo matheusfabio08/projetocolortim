@@ -1,0 +1,216 @@
+/* ===========================================
+   FichaProducao.css
+   Coordenadas pixel-perfect baseadas na
+   imagem original 981x711px
+=========================================== */
+
+* { box-sizing: border-box; }
+
+.ficha {
+  width: 981px;
+  height: 711px;
+  border: 2px solid #000;
+  position: relative;
+  background: #fff;
+  flex-shrink: 0;
+  font-family: Arial, sans-serif;
+}
+
+/* ─── NOME CLIENTE ───────────────────────────
+   x=0, y=0, w=673, h=379
+   SEM linha horizontal interna separando COR
+─────────────────────────────────────────── */
+.ficha__nome-cliente {
+  position: absolute;
+  left: 0; top: 0;
+  width: 673px; height: 379px;
+  border-right: 2px solid #000;
+  border-bottom: 2px solid #000;
+  padding-left: 18px;
+  padding-top: 34px;
+}
+.ficha__nome-cliente span {
+  font-size: 44px;
+  font-weight: 900;
+  line-height: 1;
+  color: #000;
+}
+
+/* Linha vertical x=350, somente y=0..379 */
+.ficha__linha-v-350 {
+  position: absolute;
+  left: 350px; top: 0;
+  width: 0; height: 379px;
+  border-left: 2px solid #000;
+}
+
+/* ─── COR ────────────────────────────────────
+   x=0, y=158, w=350, h=170 — centralizado
+─────────────────────────────────────────── */
+.ficha__cor {
+  position: absolute;
+  left: 0; top: 158px;
+  width: 350px; height: 170px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ficha__cor span {
+  font-size: 44px;
+  font-weight: 900;
+  color: #000;
+}
+
+/* ─── MATERIAIS ──────────────────────────────
+   x=0, y=379, w=673, h=176
+─────────────────────────────────────────── */
+.ficha__materiais {
+  position: absolute;
+  left: 0; top: 379px;
+  width: 673px; height: 176px;
+  border-right: 2px solid #000;
+  border-bottom: 2px solid #000;
+  padding: 8px 0 0 18px;
+}
+.ficha__materiais p {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.7;
+  color: #000;
+}
+
+/* ─── DESCRIÇÃO ──────────────────────────────
+   x=0, y=555, w=350, h=156
+─────────────────────────────────────────── */
+.ficha__descricao {
+  position: absolute;
+  left: 0; top: 555px;
+  width: 350px; height: 156px;
+  border-right: 2px solid #000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 3px;
+}
+.ficha__descricao span {
+  font-size: 13px;
+  font-weight: 900;
+  color: #000;
+}
+
+/* ─── ÁREA LABELS (SOLIDEZ + APROVAÇÃO) ─────
+   x=350, y=555, w=323, h=156
+─────────────────────────────────────────── */
+.ficha__labels-area {
+  position: absolute;
+  left: 350px; top: 555px;
+  width: 323px; height: 156px;
+  border-right: 2px solid #000;
+}
+
+/* Caixinhas */
+.ficha__box {
+  position: absolute;
+  left: 350px;
+  width: 48px;
+  border-right: 2px solid #000;
+  border-bottom: 2px solid #000;
+}
+.ficha__bs1 { top: 555px; height: 25px; }
+.ficha__bs2 { top: 580px; height: 25px; }
+.ficha__bs3 { top: 605px; height: 26px; }
+.ficha__ba1 { top: 631px; height: 25px; }
+.ficha__ba2 { top: 656px; height: 55px; border-bottom: none; }
+
+.ficha__label-solidez {
+  position: absolute;
+  left: 402px; top: 560px;
+  font-size: 13px;
+  font-weight: 900;
+  color: #000;
+}
+.ficha__label-aprov {
+  position: absolute;
+  left: 402px; top: 636px;
+  font-size: 13px;
+  font-weight: 900;
+  color: #000;
+}
+
+/* ─── TABELA DIREITA ─────────────────────────
+   labels: x=673..813 (140px)
+   valores: x=813..978 (165px)
+─────────────────────────────────────────── */
+.ficha__tl,
+.ficha__tv {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  border-bottom: 2px solid #000;
+}
+.ficha__tl {
+  left: 673px;
+  width: 140px;
+  border-right: 2px solid #000;
+  padding-left: 6px;
+}
+.ficha__tv {
+  left: 813px;
+  width: 165px;
+  padding-right: 6px;
+  justify-content: flex-end;
+}
+
+.ficha__r1 { top: 0;     height: 40px; }
+.ficha__r2 { top: 40px;  height: 32px; }
+.ficha__r3 { top: 72px;  height: 28px; }
+.ficha__r4 { top: 100px; height: 27px; }
+.ficha__r5 { top: 127px; height: 31px; }
+
+.ficha__lbl {
+  font-size: 13px;
+  font-weight: 900;
+  color: #000;
+}
+.ficha__val {
+  font-size: 16px;
+  font-weight: 800;
+  color: #000;
+}
+
+/* ─── NÚMERO GRANDE ──────────────────────────
+   x=673, y=158, w=305, h=170
+─────────────────────────────────────────── */
+.ficha__numero-grande {
+  position: absolute;
+  left: 673px; top: 158px;
+  width: 305px; height: 170px;
+  border-bottom: 2px solid #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.ficha__numero-grande span {
+  font-size: 140px;
+  font-weight: 900;
+  line-height: 1;
+  color: #000;
+}
+
+/* ─── ESPECIFICAÇÕES ─────────────────────────
+   x=673, y=328, w=305, h=227
+─────────────────────────────────────────── */
+.ficha__especificacoes {
+  position: absolute;
+  left: 673px; top: 328px;
+  width: 305px; height: 227px;
+  border-bottom: 2px solid #000;
+  padding: 5px 6px;
+}
+.ficha__especificacoes span {
+  font-size: 13px;
+  font-weight: 900;
+  color: #000;
+  display: block;
+}
