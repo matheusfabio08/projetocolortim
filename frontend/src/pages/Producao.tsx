@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Factory, Plus, Search, CheckCircle, Clock } from 'lucide-react'
+import { Factory, Plus, Search, CheckCircle, FileText, Printer, X } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import Layout from '@/components/Layout'
+import { FichaProducao } from '@/components/Ficha'
 import { api } from '@/lib/api'
 
 interface ProdEntry {
@@ -26,6 +27,7 @@ export default function Producao() {
   const [search, setSearch] = useState('')
   const [boxFilter, setBoxFilter] = useState<number | 'all'>('all')
   const [showModal, setShowModal] = useState(false)
+  const [fichaEntry, setFichaEntry] = useState<ProdEntry | null>(null)
   const [form, setForm] = useState({
     op_id: '', box_number: '1', machine: '', quantity_kg: '', observations: ''
   })
@@ -63,6 +65,10 @@ export default function Producao() {
     in_progress: { label: 'Em Andamento', color: 'bg-yellow-100 text-yellow-700' },
     completed:   { label: 'Concluído',    color: 'bg-green-100 text-green-700' },
     paused:      { label: 'Pausado',      color: 'bg-gray-100 text-gray-700' },
+  }
+
+  const handlePrint = () => {
+    window.print()
   }
 
   return (
@@ -135,12 +141,18 @@ export default function Producao() {
                           {e.started_at ? format(new Date(e.started_at), 'dd/MM HH:mm', { locale: ptBR }) : '-'}
                         </td>
                         <td className="px-3 py-2">
-                          {e.status === 'in_progress' && (
-                            <button onClick={() => finishMutation.mutate(e.id)}
-                              className="flex items-center space-x-1 px-2 py-1 text-xs text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
-                              <CheckCircle className="w-3 h-3" /><span>Finalizar</span>
+                          <div className="flex items-center gap-2">
+                            {e.status === 'in_progress' && (
+                              <button onClick={() => finishMutation.mutate(e.id)}
+                                className="flex items-center space-x-1 px-2 py-1 text-xs text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
+                                <CheckCircle className="w-3 h-3" /><span>Finalizar</span>
+                              </button>
+                            )}
+                            <button onClick={() => setFichaEntry(e)}
+                              className="flex items-center space-x-1 px-2 py-1 text-xs text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+                              <FileText className="w-3 h-3" /><span>Ficha</span>
                             </button>
-                          )}
+                          </div>
                         </td>
                       </tr>
                     )
@@ -154,6 +166,50 @@ export default function Producao() {
         </div>
       </div>
 
+      {/* MODAL FICHA DE PRODUÇÃO */}
+      {fichaEntry && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 print:bg-transparent print:p-0 print:block">
+          <div className="bg-white rounded-2xl shadow-2xl overflow-auto max-h-[95vh] print:rounded-none print:shadow-none print:max-h-none print:overflow-visible">
+
+            {/* Barra de ações — oculta na impressão */}
+            <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200 print:hidden">
+              <span className="font-semibold text-gray-700">Ficha de Produção — OP {fichaEntry.op_number}</span>
+              <div className="flex items-center gap-2">
+                <button onClick={handlePrint}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-red-900 hover:bg-red-950 rounded-lg transition-colors">
+                  <Printer className="w-4 h-4" /> Imprimir
+                </button>
+                <button onClick={() => setFichaEntry(null)}
+                  className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* FICHA */}
+            <div className="p-6 print:p-0">
+              <FichaProducao
+                nomeCliente={fichaEntry.client}
+                cor={fichaEntry.color}
+                noPedido={fichaEntry.op_number}
+                hora={fichaEntry.started_at
+                  ? format(new Date(fichaEntry.started_at), 'HH:mm', { locale: ptBR })
+                  : ''}
+                entrada={fichaEntry.started_at
+                  ? format(new Date(fichaEntry.started_at), 'dd/MM/yy', { locale: ptBR })
+                  : ''}
+                retorno={fichaEntry.finished_at
+                  ? format(new Date(fichaEntry.finished_at), 'dd/MM/yy', { locale: ptBR })
+                  : ''}
+                numero={fichaEntry.box_number}
+              />
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* MODAL LANÇAR PRODUÇÃO */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
