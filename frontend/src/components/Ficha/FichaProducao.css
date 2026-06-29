@@ -1,26 +1,33 @@
-/* ===========================================
-   FichaProducao.css
-   Coordenadas pixel-perfect baseadas na
-   imagem original 981x711px
-=========================================== */
+/*
+  FichaProducao.css — pixel-perfect
+  Baseado em engenharia reversa da imagem original 981x711px
 
-* { box-sizing: border-box; }
+  Linhas estruturais detectadas:
+    Verticais:   x=0, 350, 673, 813, 978
+    Horizontais: y=0, 40, 72, 100, 127, 158, 328, 379, 555, 631, 656, 707
+*/
 
-.ficha {
+.fp {
   width: 981px;
   height: 711px;
-  border: 2px solid #000;
   position: relative;
   background: #fff;
-  flex-shrink: 0;
+  border: 2px solid #000;
   font-family: Arial, sans-serif;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+.fp *, .fp *::before, .fp *::after {
+  box-sizing: border-box;
 }
 
-/* ─── NOME CLIENTE ───────────────────────────
+/* ═══════════════════════════════════════════
+   NOME CLIENTE
    x=0, y=0, w=673, h=379
-   SEM linha horizontal interna separando COR
-─────────────────────────────────────────── */
-.ficha__nome-cliente {
+   Área única — sem border-bottom em y=158
+   COR é posicionado por cima (sem divisória)
+═══════════════════════════════════════════ */
+.fp__nome {
   position: absolute;
   left: 0; top: 0;
   width: 673px; height: 379px;
@@ -29,42 +36,47 @@
   padding-left: 18px;
   padding-top: 34px;
 }
-.ficha__nome-cliente span {
+.fp__nome span {
   font-size: 44px;
   font-weight: 900;
   line-height: 1;
   color: #000;
+  display: block;
 }
 
-/* Linha vertical x=350, somente y=0..379 */
-.ficha__linha-v-350 {
+/* Linha vertical x=350, y=0..379 */
+.fp__v350 {
   position: absolute;
   left: 350px; top: 0;
-  width: 0; height: 379px;
-  border-left: 2px solid #000;
+  width: 2px; height: 379px;
+  background: #000;
 }
 
-/* ─── COR ────────────────────────────────────
-   x=0, y=158, w=350, h=170 — centralizado
-─────────────────────────────────────────── */
-.ficha__cor {
+/* ═══════════════════════════════════════════
+   COR
+   Sub-área esquerda: x=0..350, y=158..328
+   Centralizado (cy original = 232px)
+═══════════════════════════════════════════ */
+.fp__cor {
   position: absolute;
   left: 0; top: 158px;
   width: 350px; height: 170px;
   display: flex;
   align-items: center;
   justify-content: center;
+  pointer-events: none;
 }
-.ficha__cor span {
+.fp__cor span {
   font-size: 44px;
   font-weight: 900;
   color: #000;
 }
 
-/* ─── MATERIAIS ──────────────────────────────
+/* ═══════════════════════════════════════════
+   MATERIAIS
    x=0, y=379, w=673, h=176
-─────────────────────────────────────────── */
-.ficha__materiais {
+═══════════════════════════════════════════ */
+.fp__materiais {
   position: absolute;
   left: 0; top: 379px;
   width: 673px; height: 176px;
@@ -72,17 +84,20 @@
   border-bottom: 2px solid #000;
   padding: 8px 0 0 18px;
 }
-.ficha__materiais p {
+.fp__materiais p {
   font-size: 13px;
   font-weight: 700;
   line-height: 1.7;
   color: #000;
+  margin: 0;
 }
 
-/* ─── DESCRIÇÃO ──────────────────────────────
+/* ═══════════════════════════════════════════
+   DESCRIÇÃO
    x=0, y=555, w=350, h=156
-─────────────────────────────────────────── */
-.ficha__descricao {
+   Label centralizado na base (y≈708)
+═══════════════════════════════════════════ */
+.fp__descricao {
   position: absolute;
   left: 0; top: 555px;
   width: 350px; height: 156px;
@@ -92,44 +107,48 @@
   justify-content: center;
   padding-bottom: 3px;
 }
-.ficha__descricao span {
+.fp__descricao span {
   font-size: 13px;
   font-weight: 900;
   color: #000;
 }
 
-/* ─── ÁREA LABELS (SOLIDEZ + APROVAÇÃO) ─────
+/* ═══════════════════════════════════════════
+   ÁREA LABELS borda direita
    x=350, y=555, w=323, h=156
-─────────────────────────────────────────── */
-.ficha__labels-area {
+═══════════════════════════════════════════ */
+.fp__labels-borda {
   position: absolute;
   left: 350px; top: 555px;
   width: 323px; height: 156px;
   border-right: 2px solid #000;
 }
 
-/* Caixinhas */
-.ficha__box {
+/* ─── CAIXINHAS (coluna x=350, w=48) ─── */
+.fp__box {
   position: absolute;
   left: 350px;
   width: 48px;
   border-right: 2px solid #000;
   border-bottom: 2px solid #000;
 }
-.ficha__bs1 { top: 555px; height: 25px; }
-.ficha__bs2 { top: 580px; height: 25px; }
-.ficha__bs3 { top: 605px; height: 26px; }
-.ficha__ba1 { top: 631px; height: 25px; }
-.ficha__ba2 { top: 656px; height: 55px; border-bottom: none; }
+/* SOLIDEZ: 3 boxes */
+.fp__bs1 { top: 555px; height: 25px; }
+.fp__bs2 { top: 580px; height: 25px; }
+.fp__bs3 { top: 605px; height: 26px; }
+/* APROVAÇÃO: 2 boxes */
+.fp__ba1 { top: 631px; height: 25px; }
+.fp__ba2 { top: 656px; height: 55px; border-bottom: none; }
 
-.ficha__label-solidez {
+/* Labels SOLIDEZ e APROVAÇÃO */
+.fp__label-solidez {
   position: absolute;
   left: 402px; top: 560px;
   font-size: 13px;
   font-weight: 900;
   color: #000;
 }
-.ficha__label-aprov {
+.fp__label-aprov {
   position: absolute;
   left: 402px; top: 636px;
   font-size: 13px;
@@ -137,51 +156,54 @@
   color: #000;
 }
 
-/* ─── TABELA DIREITA ─────────────────────────
-   labels: x=673..813 (140px)
-   valores: x=813..978 (165px)
-─────────────────────────────────────────── */
-.ficha__tl,
-.ficha__tv {
+/* ═══════════════════════════════════════════
+   TABELA DIREITA
+   Labels:  x=673..813 (w=140)
+   Valores: x=813..978 (w=165)
+   Alturas: 40 / 32 / 28 / 27 / 31 px
+═══════════════════════════════════════════ */
+.fp__tl,
+.fp__tv {
   position: absolute;
   display: flex;
   align-items: center;
   border-bottom: 2px solid #000;
 }
-.ficha__tl {
+.fp__tl {
   left: 673px;
   width: 140px;
   border-right: 2px solid #000;
   padding-left: 6px;
 }
-.ficha__tv {
+.fp__tv {
   left: 813px;
   width: 165px;
   padding-right: 6px;
   justify-content: flex-end;
 }
+.fp__r1 { top: 0px;   height: 40px; }
+.fp__r2 { top: 40px;  height: 32px; }
+.fp__r3 { top: 72px;  height: 28px; }
+.fp__r4 { top: 100px; height: 27px; }
+.fp__r5 { top: 127px; height: 31px; }
 
-.ficha__r1 { top: 0;     height: 40px; }
-.ficha__r2 { top: 40px;  height: 32px; }
-.ficha__r3 { top: 72px;  height: 28px; }
-.ficha__r4 { top: 100px; height: 27px; }
-.ficha__r5 { top: 127px; height: 31px; }
-
-.ficha__lbl {
+.fp__lbl {
   font-size: 13px;
   font-weight: 900;
   color: #000;
 }
-.ficha__val {
+.fp__val {
   font-size: 16px;
   font-weight: 800;
   color: #000;
 }
 
-/* ─── NÚMERO GRANDE ──────────────────────────
+/* ═══════════════════════════════════════════
+   NÚMERO GRANDE
    x=673, y=158, w=305, h=170
-─────────────────────────────────────────── */
-.ficha__numero-grande {
+   font-size 140px (texto original h≈181px)
+═══════════════════════════════════════════ */
+.fp__numero {
   position: absolute;
   left: 673px; top: 158px;
   width: 305px; height: 170px;
@@ -191,26 +213,48 @@
   justify-content: center;
   overflow: hidden;
 }
-.ficha__numero-grande span {
+.fp__numero span {
   font-size: 140px;
   font-weight: 900;
   line-height: 1;
   color: #000;
 }
 
-/* ─── ESPECIFICAÇÕES ─────────────────────────
+/* ═══════════════════════════════════════════
+   ESPECIFICAÇÕES
    x=673, y=328, w=305, h=227
-─────────────────────────────────────────── */
-.ficha__especificacoes {
+═══════════════════════════════════════════ */
+.fp__especificacoes {
   position: absolute;
   left: 673px; top: 328px;
   width: 305px; height: 227px;
   border-bottom: 2px solid #000;
   padding: 5px 6px;
 }
-.ficha__especificacoes span {
+.fp__especificacoes span {
   font-size: 13px;
   font-weight: 900;
   color: #000;
   display: block;
+}
+
+/* ═══════════════════════════════════════════
+   ÁREA VAZIA DIREITA
+   x=673, y=555, w=305, h=156
+═══════════════════════════════════════════ */
+.fp__vazio-d {
+  position: absolute;
+  left: 673px; top: 555px;
+  width: 305px; height: 156px;
+}
+
+/* ═══════════════════════════════════════════
+   IMPRESSÃO
+═══════════════════════════════════════════ */
+@media print {
+  .fp {
+    border: 2px solid #000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }
