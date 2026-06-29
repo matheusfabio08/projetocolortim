@@ -67,10 +67,6 @@ export default function Producao() {
     paused:      { label: 'Pausado',      color: 'bg-gray-100 text-gray-700' },
   }
 
-  const handlePrint = () => {
-    window.print()
-  }
-
   return (
     <Layout>
       <div className="h-full flex flex-col overflow-hidden">
@@ -166,22 +162,44 @@ export default function Producao() {
         </div>
       </div>
 
-      {/* ── MODAL FICHA DE PRODUÇÃO ── */}
+      {/* ══ MODAL FICHA DE PRODUÇÃO ══ */}
       {fichaEntry && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center overflow-auto py-6 print:bg-transparent print:p-0 print:block print:overflow-visible">
-          {/* overlay fecha o modal */}
+        /*
+          O overlay ocupa a tela toda com overflow-x: auto
+          Para que a ficha (981px) nunca seja comprimida em telas menores
+        */
+        <div
+          className="fixed inset-0 bg-black/60 z-50 print:bg-transparent print:p-0 print:block"
+          style={{ overflowX: 'auto', overflowY: 'auto' }}
+        >
+          {/* clique fora fecha */}
           <div className="absolute inset-0 print:hidden" onClick={() => setFichaEntry(null)} />
 
-          {/* container: largura exata da ficha (986px) + barra de ações */}
-          <div className="relative z-10 flex flex-col print:block" style={{ width: '986px' }}>
-
+          {/*
+            Wrapper centralizado.
+            min-width garante que nunca encolhe abaixo de 981px.
+            inline-block + margin auto centraliza horizontalmente.
+          */}
+          <div
+            className="relative z-10 print:block"
+            style={{
+              display: 'inline-flex',
+              flexDirection: 'column',
+              minWidth: 981,
+              margin: '24px auto',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              position: 'relative',
+            }}
+          >
             {/* Barra de ações — oculta na impressão */}
-            <div className="flex items-center justify-between px-4 py-2 bg-white rounded-t-xl border-b border-gray-200 shadow print:hidden">
+            <div className="flex items-center justify-between px-4 py-2 bg-white rounded-t-xl border-b border-gray-200 shadow print:hidden"
+              style={{ width: 981 }}>
               <span className="font-semibold text-gray-700 text-sm">
                 Ficha de Produção — OP {fichaEntry.op_number}
               </span>
               <div className="flex items-center gap-2">
-                <button onClick={handlePrint}
+                <button onClick={() => window.print()}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-red-900 hover:bg-red-950 rounded-lg transition-colors">
                   <Printer className="w-4 h-4" /> Imprimir
                 </button>
@@ -192,8 +210,8 @@ export default function Producao() {
               </div>
             </div>
 
-            {/* FICHA — sem padding, tamanho fixo 986x711 */}
-            <div className="print:p-0">
+            {/* FICHA — tamanho fixo, nunca comprimida */}
+            <div style={{ width: 981, flexShrink: 0 }} className="print:p-0">
               <FichaProducao
                 nomeCliente={fichaEntry.client}
                 cor={fichaEntry.color}
@@ -210,7 +228,6 @@ export default function Producao() {
                 numero={fichaEntry.box_number}
               />
             </div>
-
           </div>
         </div>
       )}
