@@ -1,0 +1,7 @@
+/* FichaProducao.css */
+@media print {
+  .fp {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
