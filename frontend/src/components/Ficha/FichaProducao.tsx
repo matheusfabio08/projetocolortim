@@ -13,6 +13,23 @@ interface FichaProducaoProps {
   materiais?: string[]
 }
 
+// Proporções extraídas pixel-perfect da imagem de referência 609E192D (986x719px)
+// Bordas V: 0, 353, 676, 981  → col-A=353px, col-B=323px, col-C=305px
+// Bordas H: 0,158,328,555,707 → NOME=158, COR=170, MAT=227, RODAPE=152
+const W_COL_A = 353
+const W_COL_B = 323
+const W_COL_C = 305
+
+const H_NOME   = 158
+const H_COR    = 170
+const H_MAT    = 227
+const H_RODAPE = 152
+
+const H_ROW   = [40, 32, 28, 27, 31]
+const H_NUM   = 170
+const H_AMIDO = 51
+const H_SIMN  = 50
+
 const B  = '2px solid #000'
 const B1 = '1px solid #000'
 const FONT = '"Arial Black", "Arial Bold", Arial, sans-serif'
@@ -28,19 +45,28 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
   numero      = '',
   materiais   = [],
 }) => {
+  const tabelaRows = [
+    { label: 'Nº PEDIDO', value: noPedido },
+    { label: 'HORA',      value: hora      },
+    { label: 'ENTRADA',   value: entrada   },
+    { label: 'RETORNO',   value: retorno   },
+    { label: 'CONF.',     value: conf      },
+  ]
+
   return (
     <div style={{
       display: 'flex',
-      width: 981,
+      width: W_COL_A + W_COL_B + W_COL_C,
       border: B,
       background: '#fff',
       fontFamily: FONT,
       boxSizing: 'border-box',
+      overflow: 'hidden',
     }}>
 
-      {/* ══ COLUNA ESQUERDA (673px) ══ */}
+      {/* ══ COLUNAS ESQUERDA (A+B) ══ */}
       <div style={{
-        width: 673,
+        width: W_COL_A + W_COL_B,
         flexShrink: 0,
         borderRight: B,
         display: 'flex',
@@ -48,165 +74,164 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
         boxSizing: 'border-box',
       }}>
 
-        {/* NOME CLIENTE */}
+        {/* NOME: col-A texto + col-B caixa branca */}
         <div style={{
+          height: H_NOME,
           borderBottom: B,
-          padding: '12px 14px',
-          minHeight: 100,
           display: 'flex',
-          alignItems: 'center',
+          flexShrink: 0,
         }}>
-          <span style={{ fontSize: 52, fontWeight: 900, lineHeight: 1.1 }}>
-            {nomeCliente}
-          </span>
+          <div style={{
+            width: W_COL_A,
+            flexShrink: 0,
+            borderRight: B1,
+            display: 'flex',
+            alignItems: 'flex-start',
+            padding: '12px 14px 0',
+          }}>
+            <span style={{ fontSize: 52, fontWeight: 900, lineHeight: 1.1 }}>
+              {nomeCliente}
+            </span>
+          </div>
+          <div style={{ flex: 1, background: '#fff' }} />
         </div>
 
-        {/* COR — sem sub-divisão */}
+        {/* COR: col-A texto + col-B caixa branca */}
         <div style={{
+          height: H_COR,
           borderBottom: B,
-          minHeight: 170,
           display: 'flex',
-          alignItems: 'center',
-          padding: '10px 14px',
+          flexShrink: 0,
         }}>
-          <span style={{ fontSize: 52, fontWeight: 900 }}>
-            {cor}
-          </span>
+          <div style={{
+            width: W_COL_A,
+            flexShrink: 0,
+            borderRight: B1,
+            display: 'flex',
+            alignItems: 'center',
+            padding: '0 14px',
+          }}>
+            <span style={{ fontSize: 52, fontWeight: 900 }}>
+              {cor}
+            </span>
+          </div>
+          <div style={{ flex: 1, background: '#fff' }} />
         </div>
 
-        {/* MATERIAIS */}
+        {/* MATERIAIS: largura total, sem sub-divisória */}
         <div style={{
+          height: H_MAT,
           borderBottom: B1,
-          flex: 1,
-          minHeight: 120,
+          flexShrink: 0,
           padding: '10px 14px',
           display: 'flex',
           flexDirection: 'column',
-          gap: 4,
+          gap: 2,
+          overflow: 'hidden',
         }}>
           {materiais.map((m, i) => (
             <p key={i} style={{
               margin: 0,
               fontSize: 14,
               fontWeight: 700,
-              lineHeight: 1.6,
+              lineHeight: 1.7,
               whiteSpace: 'nowrap',
             }}>{m}</p>
           ))}
         </div>
 
-        {/* RODAPÉ: DESCRIÇÃO + SOLIDEZ/APROVAÇÃO */}
-        <div style={{ display: 'flex', minHeight: 152 }}>
-
-          {/* DESCRIÇÃO */}
+        {/* RODAPÉ: DESCRIÇÃO (col-A) + SOLIDEZ/APROVAÇÃO (col-B) */}
+        <div style={{
+          height: H_RODAPE,
+          flexShrink: 0,
+          display: 'flex',
+        }}>
           <div style={{
-            width: 127,
+            width: W_COL_A,
             flexShrink: 0,
             borderRight: B1,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'flex-end',
-            paddingBottom: 8,
+            paddingBottom: 10,
           }}>
-            <div style={{ width: '80%', height: 1, background: '#000', marginBottom: 4 }} />
+            <div style={{ width: '70%', height: 1.5, background: '#000', marginBottom: 5 }} />
             <span style={{ fontSize: 13, fontWeight: 700 }}>Descrição</span>
           </div>
 
-          {/* SOLIDEZ + APROVAÇÃO */}
           <div style={{
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-evenly',
-            padding: '10px 16px',
+            padding: '12px 18px',
           }}>
-            {/* SOLIDEZ */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <div style={{ width: 16, height: 16, border: B1 }} />
                 <div style={{ width: 16, height: 16, border: B1 }} />
                 <div style={{ width: 16, height: 16, border: B1 }} />
               </div>
               <span style={{ fontSize: 13, fontWeight: 900 }}>SOLIDEZ</span>
             </div>
-            {/* Divisória */}
-            <div style={{ height: 1, background: '#000', marginBottom: 8 }} />
-            {/* APROVAÇÃO */}
+            <div style={{ height: 1, background: '#000', margin: '4px 0' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <div style={{ width: 16, height: 16, border: B1 }} />
                 <div style={{ width: 16, height: 16, border: B1 }} />
               </div>
               <span style={{ fontSize: 13, fontWeight: 900 }}>APROVAÇÃO</span>
             </div>
           </div>
-
         </div>
+
       </div>
 
-      {/* ══ COLUNA DIREITA (308px) ══ */}
+      {/* ══ COLUNA DIREITA (C) ══ */}
       <div style={{
-        flex: 1,
+        width: W_COL_C,
+        flexShrink: 0,
         display: 'flex',
         flexDirection: 'column',
         boxSizing: 'border-box',
       }}>
 
-        {/* TABELA INFO: Nº PEDIDO / HORA / ENTRADA / RETORNO */}
-        {[
-          { label: 'Nº PEDIDO', value: noPedido },
-          { label: 'HORA',      value: hora      },
-          { label: 'ENTRADA',   value: entrada   },
-          { label: 'RETORNO',   value: retorno   },
-        ].map((row, i) => (
+        {/* TABELA INFO: 5 linhas com alturas exatas */}
+        {tabelaRows.map((row, i) => (
           <div key={i} style={{
+            height: H_ROW[i],
+            flexShrink: 0,
             display: 'flex',
-            borderBottom: B1,
+            borderBottom: i < 4 ? B1 : B,
           }}>
             <div style={{
               flex: '0 0 55%',
               borderRight: B1,
-              padding: '6px 8px',
-              fontSize: 13,
+              display: 'flex',
+              alignItems: 'center',
+              padding: '0 8px',
+              fontSize: 12,
               fontWeight: 900,
             }}>{row.label}</div>
             <div style={{
               flex: 1,
-              padding: '6px 8px',
-              fontSize: 13,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: i === 4 ? 'center' : 'flex-end',
+              padding: '0 8px',
+              fontSize: 12,
               fontWeight: 900,
-              textAlign: 'right',
               whiteSpace: 'nowrap',
-            }}>{row.value}</div>
+            }}>{i === 4 ? 'NOME' : row.value}</div>
           </div>
         ))}
 
-        {/* CONF. / NOME */}
-        <div style={{
-          display: 'flex',
-          borderBottom: B,
-        }}>
-          <div style={{
-            flex: '0 0 55%',
-            borderRight: B1,
-            padding: '6px 8px',
-            fontSize: 13,
-            fontWeight: 900,
-          }}>CONF.</div>
-          <div style={{
-            flex: 1,
-            padding: '6px 8px',
-            fontSize: 13,
-            fontWeight: 900,
-            textAlign: 'center',
-          }}>NOME</div>
-        </div>
-
         {/* NÚMERO GRANDE */}
         <div style={{
+          height: H_NUM,
+          flexShrink: 0,
           borderBottom: B,
-          minHeight: 170,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -218,8 +243,9 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
 
         {/* AMIDO */}
         <div style={{
+          height: H_AMIDO,
+          flexShrink: 0,
           borderBottom: B1,
-          padding: '10px 8px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -229,6 +255,8 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
 
         {/* SIM / NÃO */}
         <div style={{
+          height: H_SIMN,
+          flexShrink: 0,
           borderBottom: B1,
           display: 'flex',
         }}>
@@ -239,7 +267,6 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
             alignItems: 'center',
             justifyContent: 'center',
             gap: 8,
-            padding: '8px 0',
           }}>
             <div style={{ width: 16, height: 16, border: B1, flexShrink: 0 }} />
             <span style={{ fontSize: 14, fontWeight: 900 }}>SIM</span>
@@ -250,7 +277,6 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
             alignItems: 'center',
             justifyContent: 'center',
             gap: 8,
-            padding: '8px 0',
           }}>
             <div style={{ width: 16, height: 16, border: B1, flexShrink: 0 }} />
             <span style={{ fontSize: 14, fontWeight: 900 }}>NÃO</span>
@@ -258,7 +284,7 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
         </div>
 
         {/* ÁREA VAZIA */}
-        <div style={{ flex: 1, minHeight: 80 }} />
+        <div style={{ flex: 1 }} />
 
       </div>
     </div>
