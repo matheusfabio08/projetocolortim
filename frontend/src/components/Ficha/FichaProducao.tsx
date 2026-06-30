@@ -13,50 +13,59 @@ interface FichaProducaoProps {
   materiais?: string[]
 }
 
-// Grid medido pixel a pixel da referencia F6B90E44 (983x722 -> base 981x711)
-const BRD = '2px solid #000'
+// Grid medido pixel a pixel ref 609E192D (986x719) -> base 981x719
+const X_ESQ  = 0
+const X_COR  = 351
+const X_BRC  = 400
+const X_MID  = 673
+const X_LBL  = 811
+const X_DIR  = 981
+const CX_W   = 25
 
-// Verticais
-const X0  = 0
-const XD  = 172   // divisoria DESCRICAO | CAIXINHAS no rodape
-const X1  = 350   // divisoria COR | BRANCO
-const X2  = 673   // col-esq | col-dir
-const XS1 = 789   // divisoria SIM | NAO
-const X3  = 811   // label | valor tabela
-const X4  = 981
+const Y_TOP  = 0
+const Y_T1   = 32
+const Y_T2   = 63
+const Y_T3   = 95
+const Y_T4   = 126
+const Y_T5   = 158
+const Y_COR  = 328
+const Y_AMI  = 390
+const Y_SN   = 429
+const Y_ROD  = 555
+const Y_S2   = 581
+const Y_S3   = 606
+const Y_SEP  = 631
+const Y_A1   = 656
+const Y_A2   = 681
+const Y_BOT  = 707
 
-// Horizontais
-const Y0  = 0
-const Y1  = 160   // fim NOME / fim TABELA
-const Y2  = 377   // fim COR / fim NUMERO
-const YAM = 419   // fim AMIDO label
-const YSN = 426   // fim SIM/NAO
-const Y3  = 550   // inicio rodape
-const Y4  = 700   // borda inferior
+const B  = '2px solid #000'
+const B1 = '1px solid #000'
 
-const c = (
+const box = (
   x: number, y: number, w: number, h: number,
-  extra: React.CSSProperties = {}
+  s: React.CSSProperties = {}
 ): React.CSSProperties => ({
   position: 'absolute', left: x, top: y, width: w, height: h,
-  boxSizing: 'border-box', overflow: 'hidden', ...extra,
+  boxSizing: 'border-box', overflow: 'hidden', ...s,
 })
 
 const FichaProducao: React.FC<FichaProducaoProps> = ({
-  nomeCliente   = '',
-  cor           = '',
-  noPedido      = '',
-  hora          = '',
-  entrada       = '',
-  retorno       = '',
-  conf          = '',
-  numero        = '',
+  nomeCliente = '',
+  cor = '',
+  noPedido = '',
+  hora = '',
+  entrada = '',
+  retorno = '',
+  conf = '',
+  numero = '',
   especificacoes = '',
-  materiais     = [],
+  materiais = [],
 }) => {
 
+  const tableYs = [Y_TOP, Y_T1, Y_T2, Y_T3, Y_T4, Y_T5]
   const tableRows = [
-    { label: 'Nº PEDIDO', value: noPedido },
+    { label: 'N\u00ba PEDIDO', value: noPedido },
     { label: 'HORA',      value: hora },
     { label: 'ENTRADA',   value: entrada },
     { label: 'RETORNO',   value: retorno },
@@ -66,128 +75,142 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
   return (
     <div style={{
       position: 'relative',
-      width: X4,
-      height: Y4,
+      width: X_DIR,
+      height: Y_BOT,
       background: '#fff',
-      border: BRD,
+      border: B,
       fontFamily: 'Arial, Helvetica, sans-serif',
       boxSizing: 'border-box',
       flexShrink: 0,
     }}>
 
-      {/* ── NOME CLIENTE  x=0,y=0,w=673,h=160 ── */}
-      <div style={c(X0, Y0, X2, Y1, {
-        borderRight: BRD, borderBottom: BRD,
+      {/* NOME */}
+      <div style={box(X_ESQ, Y_TOP, X_MID, Y_T5, {
+        borderRight: B, borderBottom: B1,
         display: 'flex', alignItems: 'flex-start',
-        padding: '10px 10px 0 14px',
+        padding: '14px 10px 0 14px',
       })}>
-        <span style={{ fontSize: 52, fontWeight: 900, lineHeight: 1.1, color: '#000', wordBreak: 'break-word' }}>
+        <span style={{ fontSize: 56, fontWeight: 900, lineHeight: 1.05, color: '#000', wordBreak: 'break-word' }}>
           {nomeCliente}
         </span>
       </div>
 
-      {/* ── COR  x=0,y=160,w=350,h=217 ── */}
-      <div style={c(X0, Y1, X1, Y2 - Y1, {
-        borderRight: BRD, borderBottom: BRD,
+      {/* COR */}
+      <div style={box(X_ESQ, Y_T5, X_COR, Y_COR - Y_T5, {
+        borderRight: B1, borderBottom: B1,
         display: 'flex', alignItems: 'center',
         paddingLeft: 14,
       })}>
-        <span style={{ fontSize: 52, fontWeight: 900, color: '#000', lineHeight: 1 }}>
+        <span style={{ fontSize: 44, fontWeight: 900, color: '#000', lineHeight: 1 }}>
           {cor}
         </span>
       </div>
 
-      {/* ── BRANCO  x=350,y=160,w=323,h=217 ── */}
-      <div style={c(X1, Y1, X2 - X1, Y2 - Y1, {
-        borderBottom: BRD,
+      {/* BRANCO col 1 */}
+      <div style={box(X_COR, Y_T5, X_BRC - X_COR, Y_COR - Y_T5, {
+        borderRight: B1, borderBottom: B1,
       })} />
 
-      {/* ── MATERIAIS  x=0,y=377,w=673,h=173 ── */}
-      <div style={c(X0, Y2, X2, Y3 - Y2, {
-        borderRight: BRD, borderBottom: BRD,
+      {/* BRANCO col 2 */}
+      <div style={box(X_BRC, Y_T5, X_MID - X_BRC, Y_COR - Y_T5, {
+        borderBottom: B1,
+      })} />
+
+      {/* MATERIAIS */}
+      <div style={box(X_ESQ, Y_COR, X_MID, Y_ROD - Y_COR, {
+        borderRight: B, borderBottom: B1,
         display: 'flex', flexDirection: 'column',
         justifyContent: 'flex-start',
-        padding: '8px 8px 4px 10px', gap: 6,
+        padding: '8px 10px 4px 10px', gap: 5,
       })}>
         {materiais.map((m, i) => (
           <p key={i} style={{
-            fontSize: 17, fontWeight: 700, color: '#000',
-            lineHeight: 1.3, margin: 0,
+            fontSize: 15, fontWeight: 700, color: '#000',
+            lineHeight: 1.35, margin: 0,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }}>{m}</p>
         ))}
       </div>
 
-      {/* ── DESCRICAO  x=0,y=550,w=172,h=150 ── */}
-      <div style={c(X0, Y3, XD, Y4 - Y3, {
-        borderRight: BRD,
-        display: 'flex', alignItems: 'flex-end',
-        justifyContent: 'center',
-        padding: '0 4px 12px 4px',
-      })}>
-        <div style={{
-          position: 'absolute',
-          left: 12, right: 12, top: 48,
-          height: 2, background: '#000',
-        }} />
-        <span style={{ fontSize: 13, fontWeight: 700, color: '#000' }}>Descrição</span>
-      </div>
-
-      {/* ── CAIXINHAS SOLIDEZ/APROVACAO  x=172,y=550,w=501,h=150 ── */}
-      <div style={c(XD, Y3, X2 - XD, Y4 - Y3, {
-        display: 'flex', flexDirection: 'row',
-        alignItems: 'flex-start',
-        padding: '8px 0 0 12px',
-      })}>
-        {/* coluna das caixas */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flexShrink: 0 }}>
-          {[0,1,2,3,4,5].map(i => (
-            <div key={i} style={{
-              width: 22, height: 22,
-              border: BRD, background: '#fff', flexShrink: 0,
-              marginTop: i === 3 ? 10 : 0,
-            }} />
-          ))}
-        </div>
-        {/* labels */}
-        <div style={{ display: 'flex', flexDirection: 'column', paddingLeft: 8 }}>
-          <span style={{ fontSize: 14, fontWeight: 900, color: '#000', lineHeight: 1, whiteSpace: 'nowrap', marginTop: 4 }}>
-            SOLIDEZ
-          </span>
-          <span style={{ fontSize: 14, fontWeight: 900, color: '#000', lineHeight: 1, whiteSpace: 'nowrap', marginTop: 84 }}>
-            APROVAÇÃO
-          </span>
-        </div>
-      </div>
-
-      {/* ── TABELA DIREITA  x=673,y=0,w=308,h=160 ── */}
-      <div style={c(X2, Y0, X4 - X2, Y1, {
-        borderLeft: BRD,
+      {/* DESCRICAO */}
+      <div style={box(X_ESQ, Y_ROD, 127, Y_BOT - Y_ROD, {
+        borderRight: B1,
         display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'flex-end',
+        padding: '0 6px 10px 6px',
       })}>
-        {tableRows.map((row, i) => (
-          <div key={i} style={{
-            display: 'flex', flex: 1,
-            borderBottom: i < tableRows.length - 1 ? BRD : 'none',
-          }}>
-            <div style={{
-              width: X3 - X2, flexShrink: 0, borderRight: BRD,
-              fontSize: 14, fontWeight: 900, color: '#000',
-              display: 'flex', alignItems: 'center', paddingLeft: 6,
-            }}>{row.label}</div>
-            <div style={{
-              flex: 1, fontSize: 14, fontWeight: 900, color: '#000',
-              display: 'flex', alignItems: 'center',
-              justifyContent: 'flex-end', paddingRight: 8,
-              whiteSpace: 'nowrap',
-            }}>{row.value}</div>
-          </div>
-        ))}
+        <div style={{ width: '85%', height: 1, background: '#000', marginBottom: 6 }} />
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#000', whiteSpace: 'nowrap' }}>Descri\u00e7\u00e3o</span>
       </div>
 
-      {/* ── NUMERO GRANDE  x=673,y=160,w=308,h=217 ── */}
-      <div style={c(X2, Y1, X4 - X2, Y2 - Y1, {
-        borderLeft: BRD, borderBottom: BRD,
+      {/* Linha vertical separando caixas do label */}
+      <div style={box(127 + CX_W, Y_ROD, 1, Y_BOT - Y_ROD, { background: '#000' })} />
+
+      {/* Linha horizontal SOLIDEZ|APROVACAO */}
+      <div style={box(127, Y_SEP, X_MID - 127, 1, { background: '#000' })} />
+
+      {/* CAIXAS SOLIDEZ */}
+      {([Y_ROD, Y_S2, Y_S3] as number[]).map((yy, i) => {
+        const ends = [Y_S2, Y_S3, Y_SEP]
+        return (
+          <div key={`s${i}`} style={box(127, yy, CX_W, ends[i] - yy, {
+            border: B1,
+          })} />
+        )
+      })}
+
+      {/* LABEL SOLIDEZ */}
+      <span style={box(127 + CX_W + 8, Y_ROD + 6, 200, 18, {
+        fontSize: 14, fontWeight: 900, color: '#000',
+        display: 'flex', alignItems: 'center',
+      } as React.CSSProperties)}>SOLIDEZ</span>
+
+      {/* CAIXAS APROVACAO */}
+      {([Y_SEP, Y_A1, Y_A2] as number[]).map((yy, i) => {
+        const ends = [Y_A1, Y_A2, Y_BOT]
+        return (
+          <div key={`a${i}`} style={box(127, yy, CX_W, ends[i] - yy, {
+            border: B1,
+          })} />
+        )
+      })}
+
+      {/* LABEL APROVACAO */}
+      <span style={box(127 + CX_W + 8, Y_SEP + 6, 200, 18, {
+        fontSize: 14, fontWeight: 900, color: '#000',
+        display: 'flex', alignItems: 'center',
+      } as React.CSSProperties)}>APROVA\u00c7\u00c3O</span>
+
+      {/* TABELA DIREITA */}
+      <div style={box(X_MID, Y_TOP, X_DIR - X_MID, Y_T5, { borderLeft: B })}>
+        {tableRows.map((row, i) => {
+          const yStart = tableYs[i]
+          const yEnd   = tableYs[i + 1]
+          return (
+            <div key={i} style={{
+              position: 'absolute', left: 0, top: yStart,
+              width: X_DIR - X_MID, height: yEnd - yStart,
+              display: 'flex',
+              borderBottom: i < 4 ? B1 : 'none',
+            }}>
+              <div style={{
+                width: X_LBL - X_MID, flexShrink: 0, borderRight: B1,
+                fontSize: 14, fontWeight: 900, color: '#000',
+                display: 'flex', alignItems: 'center', paddingLeft: 8,
+              }}>{row.label}</div>
+              <div style={{
+                flex: 1, fontSize: 14, fontWeight: 900, color: '#000',
+                display: 'flex', alignItems: 'center',
+                justifyContent: 'flex-end', paddingRight: 8, whiteSpace: 'nowrap',
+              }}>{row.value}</div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* NUMERO GRANDE */}
+      <div style={box(X_MID, Y_T5, X_DIR - X_MID, Y_COR - Y_T5, {
+        borderLeft: B, borderBottom: B1,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       })}>
         <span style={{ fontSize: 130, fontWeight: 900, color: '#000', lineHeight: 1 }}>
@@ -195,49 +218,44 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
         </span>
       </div>
 
-      {/* ── AMIDO  x=673,y=377,w=308,h=42 ── */}
-      <div style={c(X2, Y2, X4 - X2, YAM - Y2, {
-        borderLeft: BRD, borderBottom: BRD,
+      {/* AMIDO */}
+      <div style={box(X_MID, Y_COR, X_DIR - X_MID, Y_AMI - Y_COR, {
+        borderLeft: B, borderBottom: B1,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       })}>
-        <span style={{ fontSize: 16, fontWeight: 900, color: '#000', letterSpacing: '0.1em' }}>
-          AMIDO
-        </span>
+        <span style={{ fontSize: 16, fontWeight: 900, color: '#000', letterSpacing: '0.12em' }}>AMIDO</span>
       </div>
 
-      {/* ── SIM / NAO  x=673,y=419,w=308,h=7 ── */}
-      {/* altura real: YSN-YAM = 7px parece pequeno — na imagem é ~30px */}
-      {/* usando y=377..419 para AMIDO (42px) e y=419..550 para SIM/NAO+vazio */}
-      <div style={c(X2, YAM, X4 - X2, YSN - YAM + 80, {
-        borderLeft: BRD, borderBottom: BRD,
-        display: 'flex', flexDirection: 'row',
-        alignItems: 'center',
+      {/* SIM / NAO */}
+      <div style={box(X_MID, Y_AMI, X_DIR - X_MID, Y_SN - Y_AMI, {
+        borderLeft: B, borderBottom: B1,
+        display: 'flex',
       })}>
         <div style={{
           flex: 1, display: 'flex', alignItems: 'center',
           justifyContent: 'center', gap: 8,
-          borderRight: BRD, height: '100%',
+          borderRight: B1, height: '100%',
         }}>
-          <div style={{ width: 20, height: 20, border: BRD, background: '#fff', flexShrink: 0 }} />
+          <div style={{ width: 18, height: 18, border: B1, background: '#fff', flexShrink: 0 }} />
           <span style={{ fontSize: 15, fontWeight: 900, color: '#000' }}>SIM</span>
         </div>
         <div style={{
           flex: 1, display: 'flex', alignItems: 'center',
           justifyContent: 'center', gap: 8, height: '100%',
         }}>
-          <div style={{ width: 20, height: 20, border: BRD, background: '#fff', flexShrink: 0 }} />
-          <span style={{ fontSize: 15, fontWeight: 900, color: '#000' }}>NÃO</span>
+          <div style={{ width: 18, height: 18, border: B1, background: '#fff', flexShrink: 0 }} />
+          <span style={{ fontSize: 15, fontWeight: 900, color: '#000' }}>N\u00c3O</span>
         </div>
       </div>
 
-      {/* ── ESPECIFICACOES  x=673,y=SIM+vazio,w=308 ate fim ── */}
-      <div style={c(X2, YAM + YSN - YAM + 80, X4 - X2, Y4 - (YAM + YSN - YAM + 80), {
-        borderLeft: BRD,
+      {/* ESPECIFICACOES */}
+      <div style={box(X_MID, Y_SN, X_DIR - X_MID, Y_BOT - Y_SN, {
+        borderLeft: B,
         display: 'flex', alignItems: 'flex-end',
-        padding: '0 6px 10px 6px',
+        padding: '0 6px 8px 6px',
       })}>
-        <span style={{ fontSize: 14, fontWeight: 700, color: '#000' }}>
-          {especificacoes || 'ESPECIFICAÇÕES'}
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#000' }}>
+          {especificacoes || 'ESPECIFICA\u00c7\u00d5ES'}
         </span>
       </div>
 
