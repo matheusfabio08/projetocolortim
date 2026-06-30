@@ -3,6 +3,7 @@ import Layout from "@/components/Layout";
 import { Plus, Trash2, PackagePlus, Printer, Search, Edit2, FilePlus } from "lucide-react";
 import { useAPI } from "@/hooks/useAPI";
 import { format, addBusinessDays, isValid } from "date-fns";
+import { FichaProducao } from "@/components/Ficha";
 
 interface Fibra { id: number; name: string; }
 interface Item {
@@ -33,6 +34,7 @@ const safeDate = (d: unknown): Date => {
   return new Date();
 };
 const fmt = (d: unknown, mask = 'dd/MM/yy') => { try { return format(safeDate(d), mask); } catch { return ''; } };
+const unitLabel = (u: string) => u === 'metros' ? 'M' : u === 'kg' ? 'KG' : 'UN';
 
 export default function Almoxarifado() {
   const { get, post, put, del } = useAPI();
@@ -126,18 +128,16 @@ export default function Almoxarifado() {
   );
 
   const statusLabel = (s:string)=>(({almoxarifado:'Almoxarifado',qualidade_malhas:'Qualidade de Malhas',laboratorio:'Laboratório',preparacao:'Preparação',producao:'Produção',secadora:'Secadora',destrinchagem:'Destrinchagem',enrolagem:'Enrolagem',qualidade:'Qualidade',concluido:'Concluído'} as Record<string,string>)[s]||s);
-  const unitLabel = (u:string)=>u==='metros'?'M':u==='kg'?'KG':'UN';
 
-  /* ─────────────────────────────────────────
-     FICHA — layout idêntico ao modelo original
-     ───────────────────────────────────────── */
+  /* ─── FICHA — usa o componente FichaProducao ─── */
   if (createdPO) {
-    const hora = format(new Date(),'HH:mm');
-    const diaRet = (()=>{try{return format(safeDate(createdPO.expected_date),'dd');}catch{return '--';}})();
+    const hora = format(new Date(), 'HH:mm');
+    const materiais = (createdPO.items ?? []).map(it =>
+      `${it.material?.toUpperCase() ?? ''}: ${it.quantity ?? ''}${unitLabel(it.unit ?? 'metros')} OP- ${it.individual_op ?? ''}`
+    );
 
     return (
       <Layout>
-        {/* barra de ações — some na impressão */}
         <div className="print:hidden" style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
           <div>
             <h1 style={{fontSize:20,fontWeight:700}}>Ficha — OP {createdPO.op_number}</h1>
@@ -153,267 +153,25 @@ export default function Almoxarifado() {
           </div>
         </div>
 
-        <style>{`
-          @media print {
-            nav,header,aside,.print-hide{display:none!important;}
-            body{margin:0;background:#fff;}
-            @page{size:A4 portrait;margin:6mm;}
-          }
-
-          /*
-           * ESTRUTURA EXATA DA FICHA ORIGINAL:
-           *
-           * A ficha é dividida em 2 colunas principais:
-           *   - Esquerda (≈62%): tudo exceto a tabela de info / número / especificações
-           *   - Direita  (≈38%): tabela info + número grande + ESPECIFICAÇÕES (coluna contínua)
-           *
-           * Dentro da coluna ESQUERDA:
-           *   Linha 1: NOME CLIENTE (altura pequena)
-           *   Linha 2: [COR | espaço branco] (duas sub-colunas, altura grande)
-           *   Linha 3: materiais (texto, largura total da esquerda)
-           *   Linha 4: rodapé [DESCRIÇÃO | caixinhas SOLIDEZ/APROVAÇÃO]
-           *
-           * Dentro da coluna DIREITA (contínua, sem quebras horizontais próprias):
-           *   - tabela: Nº PEDIDO / HORA / ENTRADA / RETORNO / CONF.
-           *   - número enorme (dia do retorno)
-           *   - ESPECIFICAÇÕES (label no fundo)
-           */
-
-          .ficha {
-            font-family: Arial, Helvetica, sans-serif;
-            width: 190mm;
-            max-width: 100%;
-            border: 2px solid #000;
-            background: #fff;
-            box-sizing: border-box;
-            display: grid;
-            /* 2 colunas principais */
-            grid-template-columns: 62% 38%;
-            grid-template-rows: auto;
-          }
-
-          /* ── COLUNA ESQUERDA: ocupa as 4 linhas ── */
-          .ficha-esq {
-            grid-column: 1;
-            grid-row: 1;
-            border-right: 2px solid #000;
-            display: flex;
-            flex-direction: column;
-          }
-
-          /* ── COLUNA DIREITA: ocupa 1 linha contínua ── */
-          .ficha-dir {
-            grid-column: 2;
-            grid-row: 1;
-            display: flex;
-            flex-direction: column;
-          }
-
-          /* ━━━ ESQUERDA ━━━ */
-
-          /* L1: NOME CLIENTE */
-          .f-cliente {
-            border-bottom: 2px solid #000;
-            padding: 10px 14px;
-            font-size: 30px;
-            font-weight: 900;
-            line-height: 1.1;
-            min-height: 60px;
-            display: flex;
-            align-items: center;
-          }
-
-          /* L2: COR + espaço em branco ao lado */
-          .f-cor-row {
-            border-bottom: 2px solid #000;
-            display: grid;
-            grid-template-columns: 55% 45%;
-            min-height: 130px;
-          }
-          .f-cor {
-            border-right: 2px solid #000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 26px;
-            font-weight: 900;
-            padding: 10px 8px;
-            text-align: center;
-          }
-          .f-cor-img {
-            /* espaço em branco — reservado para imagem/amostra */
-            background: #fff;
-          }
-
-          /* L3: materiais */
-          .f-mat {
-            border-bottom: 2px solid #000;
-            padding: 8px 14px;
-            font-size: 11px;
-            font-weight: 700;
-            line-height: 1.9;
-            min-height: 80px;
-          }
-
-          /* L4: rodapé esquerdo — DESCRIÇÃO + SOLIDEZ/APROVAÇÃO */
-          .f-rodape {
-            display: grid;
-            grid-template-columns: 50% 50%;
-            min-height: 100px;
-          }
-          .f-desc {
-            border-right: 2px solid #000;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-            padding: 0 14px 6px;
-          }
-          .f-desc-line { border-top: 1.5px solid #000; margin-bottom: 4px; }
-          .f-desc-label { text-align: center; font-size: 11px; font-weight: 900; }
-
-          .f-checks {
-            display: flex;
-            flex-direction: column;
-            justify-content: space-evenly;
-            padding: 8px 16px;
-          }
-          .f-chk-bloco { display: flex; align-items: center; gap: 8px; }
-          .f-boxes { display: flex; flex-direction: column; gap: 3px; }
-          .f-box {
-            width: 14px;
-            height: 14px;
-            border: 1.5px solid #000;
-          }
-          .f-chk-label { font-size: 11px; font-weight: 900; }
-
-          /* ━━━ DIREITA ━━━ */
-
-          /* tabela info */
-          .f-info-table {
-            width: 100%;
-            border-collapse: collapse;
-            border-bottom: 2px solid #000;
-          }
-          .f-info-table td {
-            padding: 5px 8px;
-            font-size: 11px;
-            font-weight: 800;
-            border-bottom: 1.5px solid #000;
-            white-space: nowrap;
-          }
-          .f-info-table tr:last-child td { border-bottom: none; }
-          .f-info-table td.lbl { border-right: 1.5px solid #000; width: 52%; }
-          .f-info-table td.val { text-align: right; }
-
-          /* número grande */
-          .f-numero {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-bottom: 2px solid #000;
-            padding: 8px 0;
-          }
-          .f-numero span {
-            font-size: 110px;
-            font-weight: 900;
-            line-height: 1;
-            letter-spacing: -4px;
-          }
-
-          /* ESPECIFICAÇÕES */
-          .f-esp {
-            padding: 6px 8px;
-            font-size: 11px;
-            font-weight: 900;
-          }
-        `}</style>
-
-        {/* ─── FICHA ─── */}
-        <div className="ficha">
-
-          {/* COLUNA ESQUERDA */}
-          <div className="ficha-esq">
-
-            {/* L1 — cliente */}
-            <div className="f-cliente">{createdPO.client?.toUpperCase()??''}</div>
-
-            {/* L2 — cor + espaço branco */}
-            <div className="f-cor-row">
-              <div className="f-cor">{createdPO.color?.toUpperCase()??''}</div>
-              <div className="f-cor-img"/>
-            </div>
-
-            {/* L3 — materiais */}
-            <div className="f-mat">
-              {(createdPO.items??[]).map((it,i)=>(
-                <div key={i}>
-                  {it.material?.toUpperCase()??''}: {it.quantity??''}{unitLabel(it.unit??'metros')} OP- {it.individual_op??''}
-                </div>
-              ))}
-            </div>
-
-            {/* L4 — rodapé */}
-            <div className="f-rodape">
-              <div className="f-desc">
-                <div className="f-desc-line"/>
-                <div className="f-desc-label">DESCRIÇÃO</div>
-              </div>
-              <div className="f-checks">
-                <div className="f-chk-bloco">
-                  <div className="f-boxes">
-                    <div className="f-box"/>
-                    <div className="f-box"/>
-                    <div className="f-box"/>
-                  </div>
-                  <span className="f-chk-label">SOLIDEZ</span>
-                </div>
-                <div className="f-chk-bloco">
-                  <div className="f-boxes">
-                    <div className="f-box"/>
-                    <div className="f-box"/>
-                  </div>
-                  <span className="f-chk-label">APROVAÇÃO</span>
-                </div>
-              </div>
-            </div>
-
-          </div>{/* fim esquerda */}
-
-          {/* COLUNA DIREITA */}
-          <div className="ficha-dir">
-
-            {/* tabela info */}
-            <table className="f-info-table">
-              <tbody>
-                <tr><td className="lbl">Nº PEDIDO</td><td className="val">{createdPO.order_number??''}</td></tr>
-                <tr><td className="lbl">HORA</td><td className="val">{hora}</td></tr>
-                <tr><td className="lbl">ENTRADA</td><td className="val">{fmt(createdPO.entry_date)}</td></tr>
-                <tr><td className="lbl">RETORNO</td><td className="val">{fmt(createdPO.expected_date)}</td></tr>
-                <tr><td className="lbl">CONF.</td><td className="val"></td></tr>
-              </tbody>
-            </table>
-
-            {/* número grande */}
-            <div className="f-numero">
-              <span>{diaRet}</span>
-            </div>
-
-            {/* ESPECIFICAÇÕES */}
-            <div className="f-esp">ESPECIFICAÇÕES</div>
-
-          </div>{/* fim direita */}
-
-        </div>{/* fim ficha */}
+        <div style={{overflowX:'auto'}}>
+          <FichaProducao
+            nomeCliente={createdPO.client?.toUpperCase() ?? ''}
+            cor={createdPO.color?.toUpperCase() ?? ''}
+            noPedido={createdPO.order_number ?? ''}
+            hora={hora}
+            entrada={fmt(createdPO.entry_date)}
+            retorno={fmt(createdPO.expected_date)}
+            numero={(() => { try { return format(safeDate(createdPO.expected_date), 'dd'); } catch { return '--'; } })()}
+            materiais={materiais}
+          />
+        </div>
 
         <p className="print:hidden" style={{textAlign:'center',color:'#aaa',fontSize:13,marginTop:12}}>Ctrl+P para imprimir</p>
       </Layout>
     );
   }
 
-  /* ─────────────────────────────────────────
-     FORMULÁRIO
-     ───────────────────────────────────────── */
+  /* ─── FORMULÁRIO ─── */
   return (
     <Layout>
       <div className="max-w-6xl mx-auto space-y-6">
