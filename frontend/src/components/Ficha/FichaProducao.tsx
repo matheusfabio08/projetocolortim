@@ -2,71 +2,60 @@ import React from 'react'
 import './FichaProducao.css'
 
 // ============================================================
-// MEDIDAS EXTRAIDAS POR ANALISE PIXEL-A-PIXEL DA REFERENCIA
-// 609E192D-A37E-4DF1-88FE-8A399B2D6581.jpg (986x719px)
-// NAO ALTERAR SEM NOVA ANALISE DA IMAGEM ORIGINAL
-// ============================================================
+// MEDIDAS EXTRAIDAS DA IMAGEM 4622F910-ACE7-468D-A336-B1F477194AE3.jpg
+// Ficha nova — Times New Roman
 //
-// COLUNAS  (bordas V fortes: x=0, 353, 676, 981)
-//   ESQ = 353px  |  CEN = 323px  |  DIR = 305px
+// COLUNAS:
+//   ESQ = 393px (40%)  |  CEN = 363px (37%)  |  DIR = 225px (23%)
 //
-// ESQ: 1 celula principal (y=0→631) + rodape (y=631→707=76px)
-//   Nao ha divisorias internas de NOME/COR na ESQ!
-//   Textos posicionados por padding:
-//     NOME comeca em y≈35 (padding-top)
-//     COR comeca em y≈217 (espaço entre NOME e COR = 152px)
-//     MAT comeca em y≈384
+// ESQ:
+//   Principal (0→631): cliente topo-esq, cor abaixo, materiais no fim
+//   Rodape (631→707 = 76px): linha + "Descrição" centralizado
 //
-// CEN: 4 celulas empilhadas
-//   Caixa 1: y=0→379   (379px) — branca, sem conteudo
-//   Caixa 2: y=379→555 (176px) — branca, sem conteudo
-//   SOLIDEZ: y=555→656 (101px)
-//   APROV:   y=656→707 ( 51px)
+// CEN:
+//   Grande vazio (0→606)
+//   SOLIDEZ (606→656 = 50px): 4 caixinhas + label
+//   APROVACAO (656→707 = 51px): 2 caixinhas + label
 //
-// DIR: celulas com alturas exatas
-//   N°PEDIDO: y=0→40    (40px)  border-bottom: 1px
-//   HORA:     y=40→72   (32px)  border-bottom: 1px
-//   ENTRADA:  y=72→100  (28px)  border-bottom: 1px
-//   RETORNO:  y=100→127 (27px)  border-bottom: 1px
-//   CONF/NOM: y=127→158 (31px)  border-bottom: 2px
-//   NUMERO:   y=158→328 (170px) border-bottom: 2px
-//   AMIDO:    y=328→379 (51px)  border-bottom: 1px
-//   SIM/NAO:  y=379→429 (50px)  border-bottom: 1px
-//   VAZIO:    y=429→707 (278px)
-//   Sub-col: label=139px | valor=166px
+// DIR:
+//   N°PEDIDO: 0→40    (40px)  border-bottom 1px
+//   HORA:     40→70   (30px)  border-bottom 1px
+//   ENTRADA:  70→98   (28px)  border-bottom 1px
+//   RETORNO:  98→126  (28px)  border-bottom 1px
+//   CONF/NOME:126→158 (32px)  border-bottom 2px
+//   NUMERO:   158→328 (170px) border-bottom 2px
+//   AMIDO LBL:328→352 (24px)  border-bottom 1px
+//   SIM/NAO:  352→378 (26px)  border-bottom 1px
+//   VAZIO:    378→707
+//   Sub-col label=120px | valor=105px
 // ============================================================
 
-const F = '"Arial Black", "Arial Bold", Arial, sans-serif'
+const F  = "'Times New Roman', Times, serif"
 const B  = '2px solid #000'
 const B1 = '1px solid #000'
 
-// Larguras de coluna
-const W_ESQ = 353
-const W_CEN = 323
-const W_DIR = 305
-const W_LBL = 139  // sub-col label na DIR
-const W_VAL = 166  // sub-col valor na DIR
+const W_ESQ = 393
+const W_CEN = 363
+const W_DIR = 225
+const W_LBL = 120
 
-// Alturas ESQ
+const H_TOTAL         = 707
 const H_ESQ_PRINCIPAL = 631
 const H_ESQ_RODAPE    = 76
 
-// Alturas CEN
-const H_CEN_BRANCA1 = 379
-const H_CEN_BRANCA2 = 176
-const H_CEN_SOLIDEZ = 101
+const H_CEN_VAZIO   = 606
+const H_CEN_SOLIDEZ = 50
 const H_CEN_APROV   = 51
 
-// Alturas DIR
-const H_DIR_PEDIDO  = 40
-const H_DIR_HORA    = 32
-const H_DIR_ENTRADA = 28
-const H_DIR_RETORNO = 27
-const H_DIR_CONF    = 31
-const H_DIR_NUMERO  = 170
-const H_DIR_AMIDO   = 51
-const H_DIR_SIMNO   = 50
-const H_DIR_VAZIO   = 278
+const H_DIR_PEDIDO    = 40
+const H_DIR_HORA      = 30
+const H_DIR_ENTRADA   = 28
+const H_DIR_RETORNO   = 28
+const H_DIR_CONF      = 32
+const H_DIR_NUMERO    = 170
+const H_DIR_AMIDO_LBL = 24
+const H_DIR_AMIDO_OPT = 26
+const H_DIR_VAZIO     = H_TOTAL - H_DIR_PEDIDO - H_DIR_HORA - H_DIR_ENTRADA - H_DIR_RETORNO - H_DIR_CONF - H_DIR_NUMERO - H_DIR_AMIDO_LBL - H_DIR_AMIDO_OPT
 
 interface FichaProducaoProps {
   nomeCliente?: string
@@ -93,7 +82,7 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
     <div style={{
       display: 'flex',
       width: W_ESQ + W_CEN + W_DIR,
-      height: H_ESQ_PRINCIPAL + H_ESQ_RODAPE,
+      height: H_TOTAL,
       border: B,
       background: '#fff',
       fontFamily: F,
@@ -102,199 +91,153 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
       flexShrink: 0,
     }}>
 
-      {/* ══════════════════════════════
-           COL ESQUERDA (353px)
-          ══════════════════════════════ */}
+      {/* ══ COL ESQUERDA ══ */}
       <div style={{
-        width: W_ESQ,
-        height: H_ESQ_PRINCIPAL + H_ESQ_RODAPE,
-        flexShrink: 0,
-        borderRight: B,
-        boxSizing: 'border-box',
-        display: 'flex',
-        flexDirection: 'column',
+        width: W_ESQ, height: H_TOTAL, flexShrink: 0,
+        borderRight: B, boxSizing: 'border-box',
+        display: 'flex', flexDirection: 'column',
       }}>
-
-        {/* CELULA PRINCIPAL (0→631) — SEM divisorias internas */}
+        {/* Principal */}
         <div style={{
-          width: '100%',
-          height: H_ESQ_PRINCIPAL,
-          flexShrink: 0,
-          borderBottom: B,
-          boxSizing: 'border-box',
-          paddingTop: 35,
-          paddingLeft: 14,
-          paddingRight: 8,
-          position: 'relative',
-          overflow: 'hidden',
+          height: H_ESQ_PRINCIPAL, flexShrink: 0,
+          borderBottom: B, boxSizing: 'border-box',
+          paddingTop: 28, paddingLeft: 14, paddingRight: 8,
+          display: 'flex', flexDirection: 'column',
         }}>
-          {/* NOME — posicao topo */}
-          <div style={{ marginBottom: 122 }}>
-            <span style={{ fontSize: 52, fontWeight: 900, lineHeight: 1, display: 'block' }}>
+          {/* CLIENTE */}
+          <div style={{ marginBottom: 100 }}>
+            <span style={{ fontSize: 46, fontWeight: 700, lineHeight: 1.1, display: 'block', fontFamily: F }}>
               {nomeCliente}
             </span>
           </div>
-
           {/* COR */}
-          <div style={{ marginBottom: 137 }}>
-            <span style={{ fontSize: 52, fontWeight: 900, lineHeight: 1, display: 'block' }}>
+          <div style={{ marginBottom: 100 }}>
+            <span style={{ fontSize: 46, fontWeight: 700, lineHeight: 1.1, display: 'block', fontFamily: F }}>
               {cor}
             </span>
           </div>
-
           {/* MATERIAIS */}
-          <div>
+          <div style={{ marginTop: 'auto' }}>
             {materiais.map((m, i) => (
               <p key={i} style={{
-                margin: 0,
-                fontSize: 13,
-                fontWeight: 700,
-                lineHeight: 1.7,
-                whiteSpace: 'nowrap',
+                margin: 0, fontSize: 12, fontWeight: 400,
+                lineHeight: 1.8, whiteSpace: 'nowrap', fontFamily: F,
               }}>{m}</p>
             ))}
           </div>
         </div>
-
-        {/* RODAPE (631→707 = 76px) */}
+        {/* Rodapé */}
         <div style={{
-          width: '100%',
-          height: H_ESQ_RODAPE,
-          flexShrink: 0,
+          height: H_ESQ_RODAPE, flexShrink: 0,
           boxSizing: 'border-box',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'flex-end',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'flex-end',
           paddingBottom: 10,
         }}>
-          <div style={{ width: '65%', height: 1.5, background: '#000', marginBottom: 5 }} />
-          <span style={{ fontSize: 13, fontWeight: 700 }}>Descrição</span>
+          <div style={{ width: '60%', height: 1, background: '#000', marginBottom: 5 }} />
+          <span style={{ fontSize: 12, fontWeight: 700, fontFamily: F }}>Descrição</span>
         </div>
-
       </div>
 
-      {/* ══════════════════════════════
-           COL CENTRO (323px)
-          ══════════════════════════════ */}
+      {/* ══ COL CENTRO ══ */}
       <div style={{
-        width: W_CEN,
-        height: H_ESQ_PRINCIPAL + H_ESQ_RODAPE,
-        flexShrink: 0,
-        borderRight: B,
-        boxSizing: 'border-box',
-        display: 'flex',
-        flexDirection: 'column',
+        width: W_CEN, height: H_TOTAL, flexShrink: 0,
+        borderRight: B, boxSizing: 'border-box',
+        display: 'flex', flexDirection: 'column',
       }}>
+        <div style={{ height: H_CEN_VAZIO, flexShrink: 0, borderBottom: B1 }} />
 
-        {/* Caixa branca 1 (0→379) */}
-        <div style={{ height: H_CEN_BRANCA1, flexShrink: 0, borderBottom: B }} />
-
-        {/* Caixa branca 2 (379→555) */}
-        <div style={{ height: H_CEN_BRANCA2, flexShrink: 0, borderBottom: B1 }} />
-
-        {/* SOLIDEZ (555→656) */}
+        {/* SOLIDEZ */}
         <div style={{
-          height: H_CEN_SOLIDEZ,
-          flexShrink: 0,
-          borderBottom: B1,
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 20px',
-          gap: 14,
-          boxSizing: 'border-box',
+          height: H_CEN_SOLIDEZ, flexShrink: 0,
+          borderBottom: B1, boxSizing: 'border-box',
+          display: 'flex', alignItems: 'center',
+          padding: '0 16px', gap: 12,
         }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <div style={{ width: 18, height: 18, border: B1 }} />
-            <div style={{ width: 18, height: 18, border: B1 }} />
-            <div style={{ width: 18, height: 18, border: B1 }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {[0,1,2,3].map(i => (
+              <div key={i} style={{ width: 14, height: 14, border: B1 }} />
+            ))}
           </div>
-          <span style={{ fontSize: 13, fontWeight: 900 }}>SOLIDEZ</span>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', fontFamily: F }}>SOLIDEZ</span>
         </div>
 
-        {/* APROVACAO (656→707) */}
+        {/* APROVAÇÃO */}
         <div style={{
-          height: H_CEN_APROV,
-          flexShrink: 0,
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 20px',
-          gap: 14,
+          height: H_CEN_APROV, flexShrink: 0,
           boxSizing: 'border-box',
+          display: 'flex', alignItems: 'center',
+          padding: '0 16px', gap: 12,
         }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <div style={{ width: 18, height: 18, border: B1 }} />
-            <div style={{ width: 18, height: 18, border: B1 }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {[0,1].map(i => (
+              <div key={i} style={{ width: 14, height: 14, border: B1 }} />
+            ))}
           </div>
-          <span style={{ fontSize: 13, fontWeight: 900 }}>APROVAÇÃO</span>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', fontFamily: F }}>APROVAÇÃO</span>
         </div>
-
       </div>
 
-      {/* ══════════════════════════════
-           COL DIREITA (305px)
-          ══════════════════════════════ */}
+      {/* ══ COL DIREITA ══ */}
       <div style={{
-        width: W_DIR,
-        flexShrink: 0,
+        width: W_DIR, flexShrink: 0,
         boxSizing: 'border-box',
-        display: 'flex',
-        flexDirection: 'column',
+        display: 'flex', flexDirection: 'column',
       }}>
 
-        {/* N° PEDIDO (40px) */}
+        {/* Nº PEDIDO */}
         <div style={{ height: H_DIR_PEDIDO, flexShrink: 0, borderBottom: B1, display: 'flex' }}>
-          <div style={{ width: W_LBL, flexShrink: 0, borderRight: B1, display: 'flex', alignItems: 'center', padding: '0 8px', fontSize: 12, fontWeight: 900, fontFamily: F }}>Nº PEDIDO</div>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 8px', fontSize: 12, fontWeight: 900, fontFamily: F }}>{noPedido}</div>
+          <div style={{ width: W_LBL, flexShrink: 0, borderRight: B1, display: 'flex', alignItems: 'center', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>Nº PEDIDO</div>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>{noPedido}</div>
         </div>
 
-        {/* HORA (32px) */}
+        {/* HORA */}
         <div style={{ height: H_DIR_HORA, flexShrink: 0, borderBottom: B1, display: 'flex' }}>
-          <div style={{ width: W_LBL, flexShrink: 0, borderRight: B1, display: 'flex', alignItems: 'center', padding: '0 8px', fontSize: 12, fontWeight: 900, fontFamily: F }}>HORA</div>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 8px', fontSize: 12, fontWeight: 900, fontFamily: F }}>{hora}</div>
+          <div style={{ width: W_LBL, flexShrink: 0, borderRight: B1, display: 'flex', alignItems: 'center', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>HORA</div>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>{hora}</div>
         </div>
 
-        {/* ENTRADA (28px) */}
+        {/* ENTRADA */}
         <div style={{ height: H_DIR_ENTRADA, flexShrink: 0, borderBottom: B1, display: 'flex' }}>
-          <div style={{ width: W_LBL, flexShrink: 0, borderRight: B1, display: 'flex', alignItems: 'center', padding: '0 8px', fontSize: 12, fontWeight: 900, fontFamily: F }}>ENTRADA</div>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 8px', fontSize: 12, fontWeight: 900, fontFamily: F }}>{entrada}</div>
+          <div style={{ width: W_LBL, flexShrink: 0, borderRight: B1, display: 'flex', alignItems: 'center', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>ENTRADA</div>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>{entrada}</div>
         </div>
 
-        {/* RETORNO (27px) */}
+        {/* RETORNO */}
         <div style={{ height: H_DIR_RETORNO, flexShrink: 0, borderBottom: B1, display: 'flex' }}>
-          <div style={{ width: W_LBL, flexShrink: 0, borderRight: B1, display: 'flex', alignItems: 'center', padding: '0 8px', fontSize: 12, fontWeight: 900, fontFamily: F }}>RETORNO</div>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 8px', fontSize: 12, fontWeight: 900, fontFamily: F }}>{retorno}</div>
+          <div style={{ width: W_LBL, flexShrink: 0, borderRight: B1, display: 'flex', alignItems: 'center', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>RETORNO</div>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>{retorno}</div>
         </div>
 
-        {/* CONF / NOME (31px) — borda FORTE */}
+        {/* CONF / NOME */}
         <div style={{ height: H_DIR_CONF, flexShrink: 0, borderBottom: B, display: 'flex' }}>
-          <div style={{ width: W_LBL, flexShrink: 0, borderRight: B1, display: 'flex', alignItems: 'center', padding: '0 8px', fontSize: 12, fontWeight: 900, fontFamily: F }}>CONF.</div>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px', fontSize: 12, fontWeight: 900, fontFamily: F }}>NOME</div>
+          <div style={{ width: W_LBL, flexShrink: 0, borderRight: B1, display: 'flex', alignItems: 'center', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>CONF.</div>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>NOME</div>
         </div>
 
-        {/* NUMERO GRANDE (170px) — borda FORTE */}
+        {/* NÚMERO GRANDE */}
         <div style={{ height: H_DIR_NUMERO, flexShrink: 0, borderBottom: B, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ fontSize: 130, fontWeight: 900, lineHeight: 1, fontFamily: F }}>{numero}</span>
+          <span style={{ fontSize: 120, fontWeight: 700, lineHeight: 1, fontFamily: F }}>{numero}</span>
         </div>
 
-        {/* AMIDO (51px) */}
-        <div style={{ height: H_DIR_AMIDO, flexShrink: 0, borderBottom: B1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ fontSize: 14, fontWeight: 900, letterSpacing: '0.1em', fontFamily: F }}>AMIDO</span>
+        {/* AMIDO label */}
+        <div style={{ height: H_DIR_AMIDO_LBL, flexShrink: 0, borderBottom: B1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', fontFamily: F }}>AMIDO</span>
         </div>
 
-        {/* SIM / NAO (50px) */}
-        <div style={{ height: H_DIR_SIMNO, flexShrink: 0, borderBottom: B1, display: 'flex' }}>
-          <div style={{ flex: 1, borderRight: B1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            <div style={{ width: 16, height: 16, border: B1, flexShrink: 0 }} />
-            <span style={{ fontSize: 13, fontWeight: 900, fontFamily: F }}>SIM</span>
+        {/* SIM / NÃO */}
+        <div style={{ height: H_DIR_AMIDO_OPT, flexShrink: 0, borderBottom: B1, display: 'flex' }}>
+          <div style={{ flex: 1, borderRight: B1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <div style={{ width: 13, height: 13, border: B1, flexShrink: 0 }} />
+            <span style={{ fontSize: 10, fontWeight: 700, fontFamily: F }}>SIM</span>
           </div>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            <div style={{ width: 16, height: 16, border: B1, flexShrink: 0 }} />
-            <span style={{ fontSize: 13, fontWeight: 900, fontFamily: F }}>NÃO</span>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <div style={{ width: 13, height: 13, border: B1, flexShrink: 0 }} />
+            <span style={{ fontSize: 10, fontWeight: 700, fontFamily: F }}>NÃO</span>
           </div>
         </div>
 
-        {/* VAZIO (278px) */}
+        {/* VAZIO */}
         <div style={{ height: H_DIR_VAZIO, flexShrink: 0 }} />
 
       </div>

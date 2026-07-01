@@ -1,9 +1,5 @@
-/* CSS vazio — estilos agora sao 100% inline no FichaProducao.tsx */
-/* Mantido apenas para nao quebrar o import existente */
-
-@media print {
-  .fp {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
+.fp-root * {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
