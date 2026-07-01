@@ -1,73 +1,26 @@
 import React from 'react'
 import './FichaProducao.css'
 
-// ============================================================
-// REPRODUCAO FIEL — ficha 9F4D6A5C (original ZIPYLIK/ROSA)
-//
-// A ficha ocupa aproximadamente METADE do A4 em altura (~148mm)
-// Largura total A4 = 210mm (sem margens)
-//
-// Proporcoes observadas na imagem original:
-//   Largura total: ~955px na imagem
-//   Altura total:  ~540px na imagem
-//
-// COLUNAS (% da largura):
-//   ESQ  = 37%  (~353px)
-//   CEN  = 35%  (~335px)
-//   DIR  = 28%  (~267px)
-//
-// COL ESQUERDA:
-//   - ZIPYLIK: topo, paddingTop~18px, paddingLeft~14px, fontSize~48px, bold
-//   - ROSA: ~35% abaixo do topo, fontSize~48px, bold
-//   - Materiais: rodape da celula principal, fontSize~12px
-//   - Celula principal altura: ~430px
-//   - Rodape (Descricao): ~80px, linha + texto centralizado
-//
-// COL CENTRO:
-//   - Area vazia grande: ~430px
-//   - SOLIDEZ: ~55px, 4 caixas 14x14 + label
-//   - APROVACAO: ~55px, 2 caixas 14x14 + label
-//
-// COL DIREITA (sub-col label~55% | valor~45%):
-//   Tabela topo (linhas finas, texto ~10px bold):
-//     N°PEDIDO : ~30px
-//     HORA     : ~26px
-//     ENTRADA  : ~26px  -> valor: "11/01/24"
-//     RETORNO  : ~26px  -> valor: "18/01/24"
-//     CONF/NOME: ~28px  borda forte embaixo
-//   NUMERO GRANDE: ~180px, fontSize~140px, bold, centralizado
-//   AMIDO label: ~22px, centralizado
-//   SIM/NAO: ~30px, caixas 14x14
-//   VAZIO: restante
-// ============================================================
-
 const F  = "Cambria, 'Book Antiqua', Georgia, serif"
 const B  = '2px solid #000'
 const B1 = '1px solid #000'
 
-// Dimensoes totais
 const W_TOTAL = 955
 const H_TOTAL = 540
 
-// Larguras colunas
 const W_ESQ = 353
 const W_CEN = 335
-const W_DIR = W_TOTAL - W_ESQ - W_CEN  // 267
+const W_DIR = W_TOTAL - W_ESQ - W_CEN
 
-// Sub-colunas DIR
-const W_LBL = Math.round(W_DIR * 0.55)  // ~147
-const W_VAL = W_DIR - W_LBL             // ~120
+const W_LBL = Math.round(W_DIR * 0.55)
 
-// Alturas ESQ
 const H_ESQ_MAIN   = 430
-const H_ESQ_FOOTER = H_TOTAL - H_ESQ_MAIN  // 110
+const H_ESQ_FOOTER = H_TOTAL - H_ESQ_MAIN
 
-// Alturas CEN
 const H_CEN_VAZIO   = 430
 const H_CEN_SOLIDEZ = 55
-const H_CEN_APROV   = H_TOTAL - H_CEN_VAZIO - H_CEN_SOLIDEZ  // 55
+const H_CEN_APROV   = H_TOTAL - H_CEN_VAZIO - H_CEN_SOLIDEZ
 
-// Alturas DIR
 const H_DIR_PEDIDO    = 30
 const H_DIR_HORA      = 26
 const H_DIR_ENTRADA   = 26
@@ -99,6 +52,13 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
   numero      = '',
   materiais   = [],
 }) => {
+
+  // Metade superior e inferior da area principal ESQ
+  // Cliente centralizado na metade superior (~215px)
+  // Cor centralizado na metade inferior (~215px)
+  // Materiais: logo abaixo da cor (nao no fundo)
+  const halfMain = Math.floor(H_ESQ_MAIN / 2)
+
   return (
     <div style={{
       display: 'flex',
@@ -112,9 +72,7 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
       flexShrink: 0,
     }}>
 
-      {/* ═══════════════════════════
-           COL ESQUERDA
-          ═══════════════════════════ */}
+      {/* === COL ESQUERDA === */}
       <div style={{
         width: W_ESQ,
         height: H_TOTAL,
@@ -131,49 +89,64 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
           flexShrink: 0,
           borderBottom: B,
           boxSizing: 'border-box',
-          paddingTop: 18,
-          paddingLeft: 14,
-          paddingRight: 8,
-          paddingBottom: 10,
           display: 'flex',
           flexDirection: 'column',
         }}>
-          {/* CLIENTE */}
-          <span style={{
-            fontSize: 48,
-            fontWeight: 700,
-            lineHeight: 1.1,
-            fontFamily: F,
-            display: 'block',
-            marginBottom: 60,
-          }}>
-            {nomeCliente}
-          </span>
 
-          {/* COR */}
-          <span style={{
-            fontSize: 48,
-            fontWeight: 700,
-            lineHeight: 1.1,
-            fontFamily: F,
-            display: 'block',
+          {/* Metade superior: CLIENTE centralizado */}
+          <div style={{
+            height: halfMain,
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            paddingLeft: 14,
+            paddingRight: 8,
           }}>
-            {cor}
-          </span>
-
-          {/* MATERIAIS — fundo da celula */}
-          <div style={{ marginTop: 'auto' }}>
-            {materiais.map((m, i) => (
-              <p key={i} style={{
-                margin: 0,
-                fontSize: 12,
-                fontWeight: 400,
-                lineHeight: 1.8,
-                whiteSpace: 'nowrap',
-                fontFamily: F,
-              }}>{m}</p>
-            ))}
+            <span style={{
+              fontSize: 48,
+              fontWeight: 700,
+              lineHeight: 1.1,
+              fontFamily: F,
+            }}>
+              {nomeCliente}
+            </span>
           </div>
+
+          {/* Metade inferior: COR centralizado + materiais abaixo */}
+          <div style={{
+            height: halfMain,
+            flexShrink: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            paddingLeft: 14,
+            paddingRight: 8,
+            gap: 14,
+          }}>
+            <span style={{
+              fontSize: 48,
+              fontWeight: 700,
+              lineHeight: 1.1,
+              fontFamily: F,
+            }}>
+              {cor}
+            </span>
+
+            {/* MATERIAIS logo abaixo da cor */}
+            <div>
+              {materiais.map((m, i) => (
+                <p key={i} style={{
+                  margin: 0,
+                  fontSize: 12,
+                  fontWeight: 400,
+                  lineHeight: 1.8,
+                  whiteSpace: 'nowrap',
+                  fontFamily: F,
+                }}>{m}</p>
+              ))}
+            </div>
+          </div>
+
         </div>
 
         {/* Rodape Descricao */}
@@ -192,9 +165,7 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
         </div>
       </div>
 
-      {/* ═══════════════════════════
-           COL CENTRO
-          ═══════════════════════════ */}
+      {/* === COL CENTRO === */}
       <div style={{
         width: W_CEN,
         height: H_TOTAL,
@@ -204,7 +175,6 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
         display: 'flex',
         flexDirection: 'column',
       }}>
-        {/* Vazio */}
         <div style={{ height: H_CEN_VAZIO, flexShrink: 0, borderBottom: B1 }} />
 
         {/* SOLIDEZ */}
@@ -245,9 +215,7 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
         </div>
       </div>
 
-      {/* ═══════════════════════════
-           COL DIREITA
-          ═══════════════════════════ */}
+      {/* === COL DIREITA === */}
       <div style={{
         width: W_DIR,
         flexShrink: 0,
@@ -258,31 +226,31 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
 
         {/* Nº PEDIDO */}
         <div style={{ height: H_DIR_PEDIDO, flexShrink: 0, borderBottom: B1, display: 'flex' }}>
-          <div style={{ width: W_LBL, flexShrink: 0, borderRight: B1, display: 'flex', alignItems: 'center', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>Nº PEDIDO</div>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>{noPedido}</div>
+          <div style={{ width: W_LBL, flexShrink: 0, borderRight: B1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>Nº PEDIDO</div>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>{noPedido}</div>
         </div>
 
         {/* HORA */}
         <div style={{ height: H_DIR_HORA, flexShrink: 0, borderBottom: B1, display: 'flex' }}>
-          <div style={{ width: W_LBL, flexShrink: 0, borderRight: B1, display: 'flex', alignItems: 'center', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>HORA</div>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>{hora}</div>
+          <div style={{ width: W_LBL, flexShrink: 0, borderRight: B1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>HORA</div>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>{hora}</div>
         </div>
 
         {/* ENTRADA */}
         <div style={{ height: H_DIR_ENTRADA, flexShrink: 0, borderBottom: B1, display: 'flex' }}>
-          <div style={{ width: W_LBL, flexShrink: 0, borderRight: B1, display: 'flex', alignItems: 'center', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>ENTRADA</div>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>{entrada}</div>
+          <div style={{ width: W_LBL, flexShrink: 0, borderRight: B1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>ENTRADA</div>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>{entrada}</div>
         </div>
 
         {/* RETORNO */}
         <div style={{ height: H_DIR_RETORNO, flexShrink: 0, borderBottom: B1, display: 'flex' }}>
-          <div style={{ width: W_LBL, flexShrink: 0, borderRight: B1, display: 'flex', alignItems: 'center', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>RETORNO</div>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>{retorno}</div>
+          <div style={{ width: W_LBL, flexShrink: 0, borderRight: B1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>RETORNO</div>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>{retorno}</div>
         </div>
 
         {/* CONF / NOME */}
         <div style={{ height: H_DIR_CONF, flexShrink: 0, borderBottom: B, display: 'flex' }}>
-          <div style={{ width: W_LBL, flexShrink: 0, borderRight: B1, display: 'flex', alignItems: 'center', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>CONF.</div>
+          <div style={{ width: W_LBL, flexShrink: 0, borderRight: B1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>CONF.</div>
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px', fontSize: 10, fontWeight: 700, fontFamily: F }}>NOME</div>
         </div>
 
