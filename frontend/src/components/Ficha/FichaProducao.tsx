@@ -14,10 +14,19 @@ const W_DIR = W_TOTAL - W_ESQ - W_CEN
 
 const W_LBL = Math.round(W_DIR * 0.55)
 
+// Celula principal ESQ: altura total menos rodape (110)
 const H_ESQ_MAIN   = 430
-const H_ESQ_FOOTER = H_TOTAL - H_ESQ_MAIN
+const H_ESQ_FOOTER = H_TOTAL - H_ESQ_MAIN // 110
 
-const H_CEN_VAZIO   = 430
+// Cada metade onde cliente e cor ficam centrados
+const HALF = Math.floor(H_ESQ_MAIN / 2) // 215
+
+// Zona dos materiais: espaco restante abaixo da cor ate o fim da celula
+// Materiais ficam na segunda metade, porem afastados da cor (proximo ao fundo)
+const H_MAT_ZONE = HALF  // reutilizada abaixo
+
+// COL CENTRO: vazio menor para a linha nao cair em cima da caixa do footer
+const H_CEN_VAZIO   = 400  // era 430, sobe 30px
 const H_CEN_SOLIDEZ = 55
 const H_CEN_APROV   = H_TOTAL - H_CEN_VAZIO - H_CEN_SOLIDEZ
 
@@ -77,7 +86,7 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
         flexDirection: 'column',
       }}>
 
-        {/* Celula principal: cliente + cor + materiais juntos, topo com paddingTop */}
+        {/* Celula principal */}
         <div style={{
           height: H_ESQ_MAIN,
           flexShrink: 0,
@@ -85,51 +94,75 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
           boxSizing: 'border-box',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'flex-start',
-          paddingTop: 40,
-          paddingLeft: 14,
-          paddingRight: 8,
-          paddingBottom: 16,
-          gap: 0,
         }}>
 
-          {/* CLIENTE */}
-          <span style={{
-            fontSize: 48,
-            fontWeight: 700,
-            lineHeight: 1.15,
-            fontFamily: F,
-            display: 'block',
+          {/* METADE SUPERIOR: cliente centralizado verticalmente */}
+          <div style={{
+            height: HALF,
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            paddingLeft: 14,
+            paddingRight: 8,
           }}>
-            {nomeCliente}
-          </span>
-
-          {/* COR — logo abaixo do cliente com espaco proporcional */}
-          <span style={{
-            fontSize: 48,
-            fontWeight: 700,
-            lineHeight: 1.15,
-            fontFamily: F,
-            display: 'block',
-            marginTop: 28,
-          }}>
-            {cor}
-          </span>
-
-          {/* MATERIAIS logo abaixo da cor */}
-          <div style={{ marginTop: 14 }}>
-            {materiais.map((m, i) => (
-              <p key={i} style={{
-                margin: 0,
-                fontSize: 14,
-                fontWeight: 400,
-                lineHeight: 1.8,
-                whiteSpace: 'nowrap',
-                fontFamily: F,
-              }}>{m}</p>
-            ))}
+            <span style={{
+              fontSize: 48,
+              fontWeight: 700,
+              lineHeight: 1.15,
+              fontFamily: F,
+            }}>
+              {nomeCliente}
+            </span>
           </div>
 
+          {/* METADE INFERIOR: cor no topo da metade + materiais no fundo */}
+          <div style={{
+            height: HALF,
+            flexShrink: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            paddingLeft: 14,
+            paddingRight: 8,
+          }}>
+
+            {/* Cor: centralizada verticalmente na parte superior da metade (top 30%) */}
+            <div style={{
+              flex: '0 0 auto',
+              height: Math.floor(HALF * 0.45),
+              display: 'flex',
+              alignItems: 'center',
+            }}>
+              <span style={{
+                fontSize: 48,
+                fontWeight: 700,
+                lineHeight: 1.15,
+                fontFamily: F,
+              }}>
+                {cor}
+              </span>
+            </div>
+
+            {/* Materiais: afastados da cor, alinhados ao fundo da metade */}
+            <div style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'flex-end',
+              paddingBottom: 12,
+            }}>
+              {materiais.map((m, i) => (
+                <p key={i} style={{
+                  margin: 0,
+                  fontSize: 14,
+                  fontWeight: 400,
+                  lineHeight: 1.8,
+                  whiteSpace: 'nowrap',
+                  fontFamily: F,
+                }}>{m}</p>
+              ))}
+            </div>
+
+          </div>
         </div>
 
         {/* Rodape Descricao */}
@@ -158,8 +191,10 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
         display: 'flex',
         flexDirection: 'column',
       }}>
+        {/* Vazio reduzido para a linha subir */}
         <div style={{ height: H_CEN_VAZIO, flexShrink: 0, borderBottom: B1 }} />
 
+        {/* SOLIDEZ */}
         <div style={{
           height: H_CEN_SOLIDEZ,
           flexShrink: 0,
@@ -176,6 +211,7 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
           <span style={{ fontSize: 11, fontWeight: 700, fontFamily: F }}>SOLIDEZ</span>
         </div>
 
+        {/* APROVACAO */}
         <div style={{
           height: H_CEN_APROV,
           flexShrink: 0,
@@ -200,40 +236,32 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
         display: 'flex',
         flexDirection: 'column',
       }}>
-
         <div style={{ height: H_DIR_PEDIDO, flexShrink: 0, borderBottom: B1, display: 'flex' }}>
           <div style={{ width: W_LBL, flexShrink: 0, borderRight: B1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, fontFamily: F }}>Nº PEDIDO</div>
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, fontFamily: F }}>{noPedido}</div>
         </div>
-
         <div style={{ height: H_DIR_HORA, flexShrink: 0, borderBottom: B1, display: 'flex' }}>
           <div style={{ width: W_LBL, flexShrink: 0, borderRight: B1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, fontFamily: F }}>HORA</div>
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, fontFamily: F }}>{hora}</div>
         </div>
-
         <div style={{ height: H_DIR_ENTRADA, flexShrink: 0, borderBottom: B1, display: 'flex' }}>
           <div style={{ width: W_LBL, flexShrink: 0, borderRight: B1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, fontFamily: F }}>ENTRADA</div>
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, fontFamily: F }}>{entrada}</div>
         </div>
-
         <div style={{ height: H_DIR_RETORNO, flexShrink: 0, borderBottom: B1, display: 'flex' }}>
           <div style={{ width: W_LBL, flexShrink: 0, borderRight: B1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, fontFamily: F }}>RETORNO</div>
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, fontFamily: F }}>{retorno}</div>
         </div>
-
         <div style={{ height: H_DIR_CONF, flexShrink: 0, borderBottom: B, display: 'flex' }}>
           <div style={{ width: W_LBL, flexShrink: 0, borderRight: B1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, fontFamily: F }}>CONF.</div>
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, fontFamily: F }}>NOME</div>
         </div>
-
         <div style={{ height: H_DIR_NUMERO, flexShrink: 0, borderBottom: B, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
           <span style={{ fontSize: 140, fontWeight: 700, lineHeight: 1, fontFamily: F }}>{numero}</span>
         </div>
-
         <div style={{ height: H_DIR_AMIDO_LBL, flexShrink: 0, borderBottom: B1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', fontFamily: F }}>AMIDO</span>
         </div>
-
         <div style={{ height: H_DIR_AMIDO_OPT, flexShrink: 0, borderBottom: B1, display: 'flex' }}>
           <div style={{ flex: 1, borderRight: B1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
             <div style={{ width: 14, height: 14, border: B1, flexShrink: 0 }} />
@@ -244,9 +272,9 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
             <span style={{ fontSize: 10, fontWeight: 700, fontFamily: F }}>NÃO</span>
           </div>
         </div>
-
         <div style={{ height: H_DIR_VAZIO, flexShrink: 0 }} />
       </div>
+
     </div>
   )
 }
