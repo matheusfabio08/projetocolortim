@@ -29,7 +29,8 @@ const H_DIR_CONF      = 28
 const H_DIR_NUMERO    = 180
 const H_DIR_AMIDO_LBL = 22
 const H_DIR_AMIDO_OPT = 30
-const H_DIR_VAZIO     = H_TOTAL - H_DIR_PEDIDO - H_DIR_HORA - H_DIR_ENTRADA - H_DIR_RETORNO - H_DIR_CONF - H_DIR_NUMERO - H_DIR_AMIDO_LBL - H_DIR_AMIDO_OPT
+const H_DIR_VAZIO     = H_TOTAL - H_DIR_PEDIDO - H_DIR_HORA - H_DIR_ENTRADA
+  - H_DIR_RETORNO - H_DIR_CONF - H_DIR_NUMERO - H_DIR_AMIDO_LBL - H_DIR_AMIDO_OPT
 
 interface FichaProducaoProps {
   nomeCliente?: string
@@ -52,9 +53,6 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
   numero      = '',
   materiais   = [],
 }) => {
-
-  const halfMain = Math.floor(H_ESQ_MAIN / 2)
-
   return (
     <div style={{
       display: 'flex',
@@ -79,6 +77,7 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
         flexDirection: 'column',
       }}>
 
+        {/* Celula principal: cliente + cor + materiais juntos, topo com paddingTop */}
         <div style={{
           height: H_ESQ_MAIN,
           flexShrink: 0,
@@ -86,62 +85,49 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
           boxSizing: 'border-box',
           display: 'flex',
           flexDirection: 'column',
+          justifyContent: 'flex-start',
+          paddingTop: 40,
+          paddingLeft: 14,
+          paddingRight: 8,
+          paddingBottom: 16,
+          gap: 0,
         }}>
 
-          {/* Metade superior: CLIENTE — alinhado proximo ao centro-superior */}
-          <div style={{
-            height: halfMain,
-            flexShrink: 0,
-            display: 'flex',
-            alignItems: 'flex-end',
-            paddingLeft: 14,
-            paddingRight: 8,
-            paddingBottom: 18,
+          {/* CLIENTE */}
+          <span style={{
+            fontSize: 48,
+            fontWeight: 700,
+            lineHeight: 1.15,
+            fontFamily: F,
+            display: 'block',
           }}>
-            <span style={{
-              fontSize: 48,
-              fontWeight: 700,
-              lineHeight: 1.1,
-              fontFamily: F,
-            }}>
-              {nomeCliente}
-            </span>
-          </div>
+            {nomeCliente}
+          </span>
 
-          {/* Metade inferior: COR + materiais — alinhados proximo ao topo da metade */}
-          <div style={{
-            height: halfMain,
-            flexShrink: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'flex-start',
-            paddingLeft: 14,
-            paddingRight: 8,
-            paddingTop: 18,
-            gap: 12,
+          {/* COR — logo abaixo do cliente com espaco proporcional */}
+          <span style={{
+            fontSize: 48,
+            fontWeight: 700,
+            lineHeight: 1.15,
+            fontFamily: F,
+            display: 'block',
+            marginTop: 28,
           }}>
-            <span style={{
-              fontSize: 48,
-              fontWeight: 700,
-              lineHeight: 1.1,
-              fontFamily: F,
-            }}>
-              {cor}
-            </span>
+            {cor}
+          </span>
 
-            {/* MATERIAIS logo abaixo da cor, fonte 14px */}
-            <div>
-              {materiais.map((m, i) => (
-                <p key={i} style={{
-                  margin: 0,
-                  fontSize: 14,
-                  fontWeight: 400,
-                  lineHeight: 1.8,
-                  whiteSpace: 'nowrap',
-                  fontFamily: F,
-                }}>{m}</p>
-              ))}
-            </div>
+          {/* MATERIAIS logo abaixo da cor */}
+          <div style={{ marginTop: 14 }}>
+            {materiais.map((m, i) => (
+              <p key={i} style={{
+                margin: 0,
+                fontSize: 14,
+                fontWeight: 400,
+                lineHeight: 1.8,
+                whiteSpace: 'nowrap',
+                fontFamily: F,
+              }}>{m}</p>
+            ))}
           </div>
 
         </div>
@@ -260,7 +246,6 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
         </div>
 
         <div style={{ height: H_DIR_VAZIO, flexShrink: 0 }} />
-
       </div>
     </div>
   )
