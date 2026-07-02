@@ -24,7 +24,7 @@ import FabricQuality from '@/pages/FabricQuality'
 import ListaSaida    from '@/pages/ListaSaida'
 import Settings      from '@/pages/Settings'
 import Admin         from '@/pages/Admin'
-import FichaEditor  from '@/components/FichaEditor/FichaEditor'
+import FichaEditor   from '@/components/FichaEditor/FichaEditor'
 
 const qc = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
