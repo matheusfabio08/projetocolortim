@@ -13,27 +13,32 @@ interface FichaProducaoProps {
   materiais?: string[]
 }
 
-const X_MID = 673
-const X_LBL = 812
-const X_DIR = 981
-const CX_X  = 127
-const CX_W  = 25
+// ═══════════════════════════════════════
+// GRID PIXEL-PERFECT ref C4776627 (985x721)
+// ═══════════════════════════════════════
+// VERTICAIS
+const X_MID = 673   // divisória col-esq | col-dir
+const X_LBL = 812   // label | valor (tabela direita)
+const X_DIR = 981   // borda direita
+const CX_X  = 127   // início caixinhas rodapé
+const CX_W  = 25    // largura caixinha
 
-const Y_T1  = 37
-const Y_T2  = 69
-const Y_T3  = 101
-const Y_T4  = 133
-const Y_T5  = 164
-const Y_COR = 334
-const Y_AMI = 396
-const Y_SN  = 435
-const Y_ROD = 561
-const Y_S2  = 589
-const Y_S3  = 617
-const Y_SEP = 637
-const Y_A1  = 662
-const Y_A2  = 688
-const Y_BOT = 713
+// HORIZONTAIS
+const Y_T1  = 37    // fim row1 tabela (Nº PEDIDO)
+const Y_T2  = 69    // fim row2 (HORA)
+const Y_T3  = 101   // fim row3 (ENTRADA)
+const Y_T4  = 133   // fim row4 (RETORNO)
+const Y_T5  = 164   // fim row5 (CONF./NOME)
+const Y_COR = 334   // fim COR / fim NÚMERO
+const Y_AMI = 396   // fim título AMIDO
+const Y_SN  = 435   // fim SIM/NÃO
+const Y_ROD = 561   // início rodapé
+const Y_S2  = 589   // caixa SOLIDEZ 2
+const Y_S3  = 617   // caixa SOLIDEZ 3
+const Y_SEP = 637   // separação SOLIDEZ | APROVAÇÃO (linha grossa)
+const Y_A1  = 662   // caixa APROVAÇÃO 1
+const Y_A2  = 688   // caixa APROVAÇÃO 2
+const Y_BOT = 713   // borda inferior
 
 const B  = '2px solid #000'
 const B1 = '1px solid #000'
@@ -52,14 +57,14 @@ const s = (
 
 const FichaProducao: React.FC<FichaProducaoProps> = ({
   nomeCliente = '',
-  cor         = '',
-  noPedido    = '',
-  hora        = '',
-  entrada     = '',
-  retorno     = '',
-  conf        = '',
-  numero      = '',
-  materiais   = [],
+  cor        = '',
+  noPedido   = '',
+  hora       = '',
+  entrada    = '',
+  retorno    = '',
+  conf       = '',
+  numero     = '',
+  materiais  = [],
 }) => {
 
   const tRows = [
@@ -71,228 +76,181 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
   const tYs = [0, Y_T1, Y_T2, Y_T3, Y_T4]
 
   return (
-    <div style={{
-      position: 'relative',
-      width: X_DIR,
-      height: Y_BOT,
-      border: B,
-      background: '#fff',
-      fontFamily: FONT,
-      boxSizing: 'border-box',
-    }}>
+    <div style={{ position: 'relative', width: 985, height: 721, background: '#fff', fontFamily: FONT }}>
 
-      {/* NOME  x=0 y=0 w=673 h=164 */}
+      {/* ═══════════════════════════════════════════
+          COLUNA ESQUERDA  x=0  w=673
+      ═══════════════════════════════════════════ */}
+
+      {/* ── NOME: container centralizado, 28px ── */}
       <div style={s(0, 0, X_MID, Y_T5, {
-        borderRight: B,
-        borderBottom: B,
+        border: B,
         display: 'flex',
-        alignItems: 'flex-start',
-        padding: '12px 10px 0 14px',
+        alignItems: 'center',
+        justifyContent: 'center',
       })}>
-        <span style={{ fontSize: 52, fontWeight: 900, lineHeight: 1.1 }}>
+        <span style={{ fontSize: 28, fontWeight: 900, fontFamily: FONT }}>
           {nomeCliente}
         </span>
       </div>
 
-      {/* COR  x=0 y=164 w=673 h=170 */}
+      {/* ── COR: container separado, centralizado, 28px ── */}
       <div style={s(0, Y_T5, X_MID, Y_COR - Y_T5, {
-        borderRight: B,
-        borderBottom: B,
+        borderLeft: B, borderRight: B, borderBottom: B,
         display: 'flex',
         alignItems: 'center',
-        paddingLeft: 14,
+        justifyContent: 'center',
       })}>
-        <span style={{ fontSize: 52, fontWeight: 900 }}>
+        <span style={{ fontSize: 28, fontWeight: 900, fontFamily: FONT }}>
           {cor}
         </span>
       </div>
 
-      {/* MATERIAIS  x=0 y=334 w=673 h=227 */}
+      {/* ── MATERIAIS ── */}
       <div style={s(0, Y_COR, X_MID, Y_ROD - Y_COR, {
-        borderRight: B,
-        borderBottom: B1,
+        borderLeft: B, borderRight: B, borderBottom: B,
+        padding: '6px 8px',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'flex-start',
-        padding: '10px 10px 6px 10px',
-        gap: 4,
       })}>
         {materiais.map((m, i) => (
-          <p key={i} style={{
-            margin: 0,
-            fontSize: 14,
-            fontWeight: 700,
-            lineHeight: 1.5,
-            whiteSpace: 'nowrap',
-          }}>{m}</p>
+          <div key={i} style={{ fontSize: 11, fontFamily: FONT, lineHeight: 1.4 }}>{m}</div>
         ))}
       </div>
 
-      {/* DESCRIÇÃO  x=0 y=561 w=127 h=152 */}
+      {/* ── DESCRIÇÃO (rodapé esquerdo) ── */}
       <div style={s(0, Y_ROD, CX_X, Y_BOT - Y_ROD, {
-        borderRight: B1,
+        borderLeft: B, borderBottom: B,
         display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-        paddingBottom: 8,
+        alignItems: 'flex-start',
+        justifyContent: 'center',
+        paddingTop: 4,
       })}>
-        <div style={{ width: '80%', height: 1, background: '#000', marginBottom: 4 }} />
-        <span style={{ fontSize: 13, fontWeight: 700 }}>Descrição</span>
+        <span style={{ fontSize: 9, fontWeight: 700, fontFamily: FONT }}>Descrição</span>
       </div>
 
-      {/* LINHA VERTICAL direita das caixas */}
-      <div style={s(CX_X + CX_W, Y_ROD, 1, Y_BOT - Y_ROD, { background: '#000' })} />
+      {/* ── LINHA VERTICAL direita das caixinhas ── */}
+      <div style={s(CX_X + CX_W, Y_ROD, 2, Y_BOT - Y_ROD, { background: '#000' })} />
 
-      {/* BORDA DIREITA coluna esquerda no rodapé */}
-      <div style={s(X_MID - 1, Y_ROD, 1, Y_BOT - Y_ROD, { background: '#000' })} />
+      {/* ── BORDA DIREITA col-esq no rodapé ── */}
+      <div style={s(X_MID - 2, Y_ROD, 2, Y_BOT - Y_ROD, { background: '#000' })} />
 
-      {/* LINHA H separação SOLIDEZ | APROVAÇÃO */}
-      <div style={s(CX_X, Y_SEP, X_MID - CX_X, 1, { background: '#000' })} />
+      {/* ── LINHA H separação SOLIDEZ | APROVAÇÃO (grossa, largura total) ── */}
+      <div style={s(CX_X, Y_SEP, X_MID - CX_X, 2, { background: '#000' })} />
 
-      {/* CAIXAS SOLIDEZ */}
+      {/* ── CAIXAS SOLIDEZ (3) — linhas só dentro da coluna estreita ── */}
       {([Y_ROD, Y_S2, Y_S3] as number[]).map((yy, i) => {
         const yEnd = [Y_S2, Y_S3, Y_SEP][i]
-        return <div key={`s${i}`} style={s(CX_X, yy, CX_W, yEnd - yy, { border: B1 })} />
+        return (
+          <div key={i} style={s(CX_X, yy, CX_W, yEnd - yy, {
+            borderTop: i === 0 ? B : B1,
+            borderLeft: B1,
+          })} />
+        )
       })}
 
-      {/* LABEL SOLIDEZ */}
-      <div style={s(CX_X + CX_W + 6, Y_ROD + 6, 200, 20, {
-        display: 'flex', alignItems: 'center',
+      {/* ── LABEL SOLIDEZ (área limpa sem linhas) ── */}
+      <div style={s(CX_X + CX_W, Y_ROD, X_MID - CX_X - CX_W - 2, Y_SEP - Y_ROD, {
+        display: 'flex',
+        alignItems: 'flex-start',
+        paddingTop: 3,
+        paddingLeft: 5,
       })}>
-        <span style={{ fontSize: 13, fontWeight: 900 }}>SOLIDEZ</span>
+        <span style={{ fontSize: 9, fontWeight: 700, fontFamily: FONT }}>SOLIDEZ</span>
       </div>
 
-      {/* CAIXAS APROVAÇÃO */}
+      {/* ── CAIXAS APROVAÇÃO (3) ── */}
       {([Y_SEP, Y_A1, Y_A2] as number[]).map((yy, i) => {
         const yEnd = [Y_A1, Y_A2, Y_BOT][i]
-        return <div key={`a${i}`} style={s(CX_X, yy, CX_W, yEnd - yy, { border: B1 })} />
+        return (
+          <div key={i} style={s(CX_X, yy + (i === 0 ? 2 : 0), CX_W, yEnd - yy - (i === 0 ? 2 : 0), {
+            borderTop: B1,
+            borderLeft: B1,
+            borderBottom: i === 2 ? B : 'none',
+          })} />
+        )
       })}
 
-      {/* LABEL APROVAÇÃO */}
-      <div style={s(CX_X + CX_W + 6, Y_SEP + 6, 200, 20, {
-        display: 'flex', alignItems: 'center',
+      {/* ── LABEL APROVAÇÃO (área limpa) ── */}
+      <div style={s(CX_X + CX_W, Y_SEP + 2, X_MID - CX_X - CX_W - 2, Y_BOT - Y_SEP - 2, {
+        display: 'flex',
+        alignItems: 'flex-start',
+        paddingTop: 3,
+        paddingLeft: 5,
       })}>
-        <span style={{ fontSize: 13, fontWeight: 900 }}>APROVAÇÃO</span>
+        <span style={{ fontSize: 9, fontWeight: 700, fontFamily: FONT }}>APROVAÇÃO</span>
       </div>
 
-      {/* TABELA DIREITA: 4 rows  x=673 y=0 w=308 h=133 */}
-      <div style={s(X_MID, 0, X_DIR - X_MID, Y_T4, { borderLeft: B })}>
+      {/* ═══════════════════════════════════════════
+          COLUNA DIREITA  x=673  w=308
+      ═══════════════════════════════════════════ */}
+
+      {/* ── TABELA DIREITA: 4 rows label+valor ── */}
+      <div style={s(X_MID, 0, X_DIR - X_MID, Y_T4, { border: B })}>
         {tRows.map((row, i) => (
           <div key={i} style={{
             position: 'absolute',
-            left: 0, top: tYs[i],
-            width: X_DIR - X_MID,
-            height: tYs[i + 1] - tYs[i],
+            left: 0, top: tYs[i], width: '100%', height: tYs[i + 1] - tYs[i],
+            borderBottom: i < tRows.length - 1 ? B1 : 'none',
             display: 'flex',
-            borderBottom: B1,
           }}>
             <div style={{
-              width: X_LBL - X_MID,
-              flexShrink: 0,
-              borderRight: B1,
-              display: 'flex',
-              alignItems: 'center',
-              paddingLeft: 7,
-              fontSize: 13,
-              fontWeight: 900,
+              width: X_LBL - X_MID, borderRight: B1,
+              fontSize: 8, fontWeight: 700, fontFamily: FONT,
+              display: 'flex', alignItems: 'center', paddingLeft: 4,
             }}>{row.label}</div>
             <div style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              paddingRight: 7,
-              fontSize: 13,
-              fontWeight: 900,
-              whiteSpace: 'nowrap',
+              flex: 1, fontSize: 9, fontFamily: FONT,
+              display: 'flex', alignItems: 'center', paddingLeft: 4,
             }}>{row.value}</div>
           </div>
         ))}
       </div>
 
-      {/* ROW CONF. / NOME  x=673 y=133 w=308 h=31 */}
+      {/* ── ROW CONF./NOME ── */}
       <div style={s(X_MID, Y_T4, X_DIR - X_MID, Y_T5 - Y_T4, {
-        borderLeft: B,
-        borderBottom: B,
+        borderLeft: B, borderRight: B, borderBottom: B,
         display: 'flex',
       })}>
-        <div style={{
-          width: X_LBL - X_MID,
-          flexShrink: 0,
-          borderRight: B1,
-          display: 'flex',
-          alignItems: 'center',
-          paddingLeft: 7,
-          fontSize: 13,
-          fontWeight: 900,
-        }}>CONF.</div>
-        <div style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 13,
-          fontWeight: 900,
-        }}>NOME</div>
+        <div style={{ width: X_LBL - X_MID, borderRight: B1, fontSize: 8, fontWeight: 700, fontFamily: FONT, display: 'flex', alignItems: 'center', paddingLeft: 4 }}>CONF.</div>
+        <div style={{ flex: 1, fontSize: 8, fontWeight: 700, fontFamily: FONT, display: 'flex', alignItems: 'center', paddingLeft: 4 }}>NOME</div>
       </div>
 
-      {/* NÚMERO GRANDE  x=673 y=164 w=308 h=170 */}
+      {/* ── NÚMERO GRANDE ── */}
       <div style={s(X_MID, Y_T5, X_DIR - X_MID, Y_COR - Y_T5, {
-        borderLeft: B,
-        borderBottom: B,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        borderLeft: B, borderRight: B, borderBottom: B,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
       })}>
-        <span style={{ fontSize: 130, fontWeight: 900, lineHeight: 1 }}>
-          {numero}
-        </span>
+        <span style={{ fontSize: 120, fontWeight: 900, fontFamily: FONT, lineHeight: 1 }}>{numero}</span>
       </div>
 
-      {/* AMIDO título  x=673 y=334 w=308 h=62 */}
+      {/* ── AMIDO título ── */}
       <div style={s(X_MID, Y_COR, X_DIR - X_MID, Y_AMI - Y_COR, {
-        borderLeft: B,
-        borderBottom: B1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        borderLeft: B, borderRight: B, borderBottom: B,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
       })}>
-        <span style={{ fontSize: 15, fontWeight: 900, letterSpacing: '0.12em' }}>AMIDO</span>
+        <span style={{ fontSize: 11, fontWeight: 700, fontFamily: FONT }}>AMIDO</span>
       </div>
 
-      {/* SIM / NÃO  x=673 y=396 w=308 h=39 */}
+      {/* ── SIM / NÃO ── */}
       <div style={s(X_MID, Y_AMI, X_DIR - X_MID, Y_SN - Y_AMI, {
-        borderLeft: B,
-        borderBottom: B1,
+        borderLeft: B, borderRight: B, borderBottom: B,
         display: 'flex',
       })}>
-        <div style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 8,
-          borderRight: B1,
-        }}>
-          <div style={{ width: 16, height: 16, border: B1, flexShrink: 0 }} />
-          <span style={{ fontSize: 14, fontWeight: 900 }}>SIM</span>
+        <div style={{ flex: 1, borderRight: B1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <span style={{ width: 12, height: 12, border: B1, display: 'inline-block' }} />
+          <span style={{ fontSize: 9, fontWeight: 700, fontFamily: FONT }}>SIM</span>
         </div>
-        <div style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 8,
-        }}>
-          <div style={{ width: 16, height: 16, border: B1, flexShrink: 0 }} />
-          <span style={{ fontSize: 14, fontWeight: 900 }}>NÃO</span>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <span style={{ width: 12, height: 12, border: B1, display: 'inline-block' }} />
+          <span style={{ fontSize: 9, fontWeight: 700, fontFamily: FONT }}>NÃO</span>
         </div>
       </div>
 
-      {/* ÁREA VAZIA direita  x=673 y=435 w=308 h=278 */}
+      {/* ── ÁREA VAZIA direita ── */}
       <div style={s(X_MID, Y_SN, X_DIR - X_MID, Y_BOT - Y_SN, {
-        borderLeft: B,
+        borderLeft: B, borderRight: B, borderBottom: B,
       })} />
 
     </div>
