@@ -19,6 +19,8 @@ export default function Layout({ children }: { children: ReactNode }) {
   const [isCollapsed, setCollapsed] = useState(false)
   const [expandedSections, setExpandedSections] = useState<string[]>([])
 
+  const isAdmin = user?.role === 'Admin'
+
   const toggleSection = (id: string) => {
     if (isCollapsed) return
     setExpandedSections(prev =>
@@ -27,12 +29,12 @@ export default function Layout({ children }: { children: ReactNode }) {
   }
 
   const simpleNavItems: NavItem[] = [
-    { path: '/dashboard',   icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/gerenciamento', icon: BarChart3,      label: 'Gerenciamento' },
-    { path: '/pcp',         icon: Kanban,          label: 'PCP' },
-    { path: '/almoxarifado',icon: Package,         label: 'Almoxarifado' },
-    { path: '/laboratorio', icon: FlaskConical,    label: 'Laboratório' },
-    { path: '/pesagem',     icon: Scale,           label: 'Pesagem' },
+    { path: '/dashboard',     icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/gerenciamento', icon: BarChart3,        label: 'Gerenciamento' },
+    { path: '/pcp',           icon: Kanban,           label: 'PCP' },
+    { path: '/almoxarifado',  icon: Package,          label: 'Almoxarifado' },
+    { path: '/laboratorio',   icon: FlaskConical,     label: 'Laboratório' },
+    { path: '/pesagem',       icon: Scale,            label: 'Pesagem' },
   ]
 
   const navSections: NavSection[] = [
@@ -55,13 +57,17 @@ export default function Layout({ children }: { children: ReactNode }) {
   ]
 
   const bottomNavItems: NavItem[] = [
-    { path: '/secadora',      icon: Wind,        label: 'Secadora' },
-    { path: '/destrinchagem', icon: Split,       label: 'Destrinchagem' },
-    { path: '/enrolagem',     icon: ScrollText,  label: 'Enrolagem' },
-    { path: '/qualidade',     icon: CheckCircle, label: 'Qualidade' },
-    { path: '/fabric-quality',icon: CheckCircle, label: 'Qual. Malhas' },
-    { path: '/admin',         icon: Settings,    label: 'Admin' },
-    { path: '/settings',      icon: Settings,    label: 'Configurações' },
+    { path: '/secadora',       icon: Wind,        label: 'Secadora' },
+    { path: '/destrinchagem',  icon: Split,       label: 'Destrinchagem' },
+    { path: '/enrolagem',      icon: ScrollText,  label: 'Enrolagem' },
+    { path: '/qualidade',      icon: CheckCircle, label: 'Qualidade' },
+    { path: '/fabric-quality', icon: CheckCircle, label: 'Qual. Malhas' },
+    { path: '/settings',       icon: Settings,    label: 'Configurações' },
+  ]
+
+  const adminNavItems: NavItem[] = [
+    { path: '/admin',              icon: Settings, label: 'Admin' },
+    { path: '/admin/ficha-editor', icon: Settings, label: 'Ficha Editor' },
   ]
 
   const renderNavItem = (item: NavItem, isSubItem = false) => {
@@ -201,6 +207,17 @@ export default function Layout({ children }: { children: ReactNode }) {
           <div className="my-2 border-t border-red-900/30" />
           {navSections.map(section => renderSection(section))}
           {bottomNavItems.map(item => renderNavItem(item))}
+
+          {/* Seção Admin — visível apenas para role Admin */}
+          {isAdmin && (
+            <>
+              <div className="my-2 border-t border-red-900/30" />
+              {!isCollapsed && (
+                <p className="px-3 text-xs font-semibold text-red-400 uppercase tracking-wide">Administração</p>
+              )}
+              {adminNavItems.map(item => renderNavItem(item))}
+            </>
+          )}
         </nav>
 
         {/* Footer */}

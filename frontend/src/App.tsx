@@ -38,7 +38,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
   if (!user) return <Navigate to="/login" replace />
-  if (user.role !== 'admin') return <Navigate to="/dashboard" replace />
+  if (user.role !== 'Admin') return <Navigate to="/dashboard" replace />
   return <>{children}</>
 }
 
