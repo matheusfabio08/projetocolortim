@@ -10,7 +10,6 @@ const W_TOTAL = 955
 const H_TOTAL = 540
 
 // === COLUNAS ===
-// Original: ESQ ocupa ~37%, CEN ~35%, DIR ~28%
 const W_ESQ = 360
 const W_CEN = 310
 const W_DIR = W_TOTAL - W_ESQ - W_CEN  // 285
@@ -19,30 +18,30 @@ const W_DIR = W_TOTAL - W_ESQ - W_CEN  // 285
 const W_LBL = Math.round(W_DIR * 0.52)  // ~148
 
 // === ALTURAS COL ESQ ===
-const H_ESQ_MAIN   = 435  // celula principal
-const H_ESQ_FOOTER = H_TOTAL - H_ESQ_MAIN  // 105 rodape Descricao
-const HALF = Math.floor(H_ESQ_MAIN / 2)  // 217 cada metade
+const H_ESQ_MAIN   = 435
+const H_ESQ_FOOTER = H_TOTAL - H_ESQ_MAIN  // 105
+const HALF = Math.floor(H_ESQ_MAIN / 2)    // 217
 
 // === ALTURAS COL CENTRO ===
-// Linha SOLIDEZ deve aparecer acima do footer da ESQ
-const H_CEN_VAZIO   = 395
-const H_CEN_SOLIDEZ = 72
-const H_CEN_APROV   = H_TOTAL - H_CEN_VAZIO - H_CEN_SOLIDEZ  // 73
+// Linha PRESENCA DE GOMA (label + SIM/NAO) alinhada com bloco inferior dir
+const H_CEN_VAZIO       = 340
+const H_CEN_GOMA_HEADER = 28   // "PRESENÇA DE GOMA?"
+const H_CEN_GOMA_OPTS   = 28   // SIM / NÃO
+const H_CEN_APROV_HDR   = 28   // "APROVAÇÃO E DATA DE SAÍDA"
+const H_CEN_APROV_ROWS  = H_TOTAL - H_CEN_VAZIO - H_CEN_GOMA_HEADER - H_CEN_GOMA_OPTS - H_CEN_APROV_HDR // restante para sub-linhas
 
 // === ALTURAS COL DIREITA ===
-// Tabela superior: celulas menores
 const H_DIR_PEDIDO    = 24
 const H_DIR_HORA      = 22
 const H_DIR_ENTRADA   = 22
 const H_DIR_RETORNO   = 22
 const H_DIR_CONF      = 24
 const H_DIR_TABELA    = H_DIR_PEDIDO + H_DIR_HORA + H_DIR_ENTRADA + H_DIR_RETORNO + H_DIR_CONF  // 114
-// Numero grande: ocupa bloco generoso
-const H_DIR_NUMERO    = 210
-// AMIDO: fino, logo abaixo do numero
-const H_DIR_AMIDO_LBL = 20
-const H_DIR_AMIDO_OPT = 26
-const H_DIR_VAZIO     = H_TOTAL - H_DIR_TABELA - H_DIR_NUMERO - H_DIR_AMIDO_LBL - H_DIR_AMIDO_OPT  // 170
+const H_DIR_NUMERO    = 196
+// REPROCESSO + SOLIDEZ ficam abaixo do número
+const H_DIR_REPROCESSO = 26
+const H_DIR_SOLIDEZ    = 26
+const H_DIR_RESTO      = H_TOTAL - H_DIR_TABELA - H_DIR_NUMERO - H_DIR_REPROCESSO - H_DIR_SOLIDEZ // sobra
 
 interface FichaProducaoProps {
   nomeCliente?: string
@@ -51,6 +50,7 @@ interface FichaProducaoProps {
   hora?: string
   entrada?: string
   retorno?: string
+  conf?: string
   numero?: string | number
   materiais?: string[]
 }
@@ -62,9 +62,14 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
   hora        = '',
   entrada     = '',
   retorno     = '',
+  conf        = '',
   numero      = '',
   materiais   = [],
 }) => {
+
+  // Número de sub-linhas de aprovação (3 linhas)
+  const aprovRows = 3
+
   return (
     <div style={{
       display: 'flex',
@@ -101,7 +106,7 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
           flexDirection: 'column',
         }}>
 
-          {/* METADE SUPERIOR: CLIENTE centralizado */}
+          {/* METADE SUPERIOR: CLIENTE */}
           <div style={{
             height: HALF,
             flexShrink: 0,
@@ -120,7 +125,7 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
             </span>
           </div>
 
-          {/* METADE INFERIOR: COR no centro-superior + materiais no fundo */}
+          {/* METADE INFERIOR: COR + materiais */}
           <div style={{
             height: HALF,
             flexShrink: 0,
@@ -130,7 +135,7 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
             paddingRight: 6,
           }}>
 
-            {/* COR: centro da zona superior (45% da metade) */}
+            {/* COR */}
             <div style={{
               height: Math.floor(HALF * 0.46),
               flexShrink: 0,
@@ -147,7 +152,7 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
               </span>
             </div>
 
-            {/* MATERIAIS: afastados da cor, colados ao fundo */}
+            {/* MATERIAIS */}
             <div style={{
               flex: 1,
               display: 'flex',
@@ -169,7 +174,7 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
           </div>
         </div>
 
-        {/* Rodape Descricao — sem linha, apenas texto centralizado */}
+        {/* Rodape */}
         <div style={{
           height: H_ESQ_FOOTER,
           flexShrink: 0,
@@ -195,44 +200,72 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
         flexDirection: 'column',
       }}>
 
-        {/* Area vazia (desenho) */}
+        {/* Area vazia (desenho/amostra) */}
         <div style={{ height: H_CEN_VAZIO, flexShrink: 0, borderBottom: B }} />
 
-        {/* SOLIDEZ */}
+        {/* PRESENÇA DE GOMA? — header */}
         <div style={{
-          height: H_CEN_SOLIDEZ,
+          height: H_CEN_GOMA_HEADER,
           flexShrink: 0,
           borderBottom: B,
-          boxSizing: 'border-box',
           display: 'flex',
           alignItems: 'center',
-          paddingLeft: 8,
-          gap: 8,
+          paddingLeft: 10,
+          gap: 10,
         }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flexShrink: 0 }}>
-            {[0,1,2,3].map(i => (
-              <div key={i} style={{ width: 13, height: 13, border: B }} />
-            ))}
-          </div>
-          <span style={{ fontSize: 11, fontWeight: 700, fontFamily: F, letterSpacing: '0.05em' }}>SOLIDEZ</span>
+          <span style={{ fontSize: 10, fontWeight: 700, fontFamily: F, letterSpacing: '0.05em' }}>
+            PRESENÇA DE GOMA?
+          </span>
         </div>
 
-        {/* APROVACAO */}
+        {/* SIM / NÃO */}
         <div style={{
-          height: H_CEN_APROV,
+          height: H_CEN_GOMA_OPTS,
           flexShrink: 0,
-          boxSizing: 'border-box',
+          borderBottom: B,
           display: 'flex',
           alignItems: 'center',
-          paddingLeft: 8,
-          gap: 8,
+          paddingLeft: 10,
+          gap: 16,
         }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flexShrink: 0 }}>
-            {[0,1].map(i => (
-              <div key={i} style={{ width: 13, height: 13, border: B }} />
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, fontFamily: F }}>SIM</span>
+            <div style={{ width: 13, height: 13, border: B, flexShrink: 0 }} />
           </div>
-          <span style={{ fontSize: 11, fontWeight: 700, fontFamily: F, letterSpacing: '0.05em' }}>APROVAÇÃO</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, fontFamily: F }}>NÃO</span>
+            <div style={{ width: 13, height: 13, border: B, flexShrink: 0 }} />
+          </div>
+        </div>
+
+        {/* APROVAÇÃO E DATA DE SAÍDA — header */}
+        <div style={{
+          height: H_CEN_APROV_HDR,
+          flexShrink: 0,
+          borderBottom: B,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <span style={{ fontSize: 10, fontWeight: 700, fontFamily: F, letterSpacing: '0.05em' }}>
+            APROVAÇÃO E DATA DE SAÍDA
+          </span>
+        </div>
+
+        {/* Sub-linhas de aprovação */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          {Array.from({ length: aprovRows }).map((_, i) => (
+            <div key={i} style={{
+              flex: 1,
+              borderBottom: i < aprovRows - 1 ? B : 'none',
+              display: 'flex',
+            }}>
+              {/* coluna data */}
+              <div style={{ width: 60, borderRight: B, flexShrink: 0 }} />
+              {/* coluna assinatura */}
+              <div style={{ flex: 1 }} />
+            </div>
+          ))}
         </div>
       </div>
 
@@ -271,37 +304,45 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, fontFamily: F }}>{retorno}</div>
         </div>
 
-        {/* CONF / NOME */}
+        {/* CONF. — valor dinâmico */}
         <div style={{ height: H_DIR_CONF, flexShrink: 0, borderBottom: B2, display: 'flex' }}>
           <div style={{ width: W_LBL, flexShrink: 0, borderRight: B, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, fontFamily: F }}>CONF.</div>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, fontFamily: F }}>NOME</div>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, fontFamily: F }}>{conf}</div>
         </div>
 
         {/* NUMERO GRANDE */}
         <div style={{ height: H_DIR_NUMERO, flexShrink: 0, borderBottom: B2, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-          <span style={{ fontSize: 150, fontWeight: 700, lineHeight: 1, fontFamily: F }}>{numero}</span>
+          <span style={{ fontSize: 148, fontWeight: 700, lineHeight: 1, fontFamily: F }}>{numero}</span>
         </div>
 
-        {/* AMIDO label */}
-        <div style={{ height: H_DIR_AMIDO_LBL, flexShrink: 0, borderBottom: B, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', fontFamily: F }}>AMIDO</span>
+        {/* REPROCESSO */}
+        <div style={{
+          height: H_DIR_REPROCESSO,
+          flexShrink: 0,
+          borderBottom: B,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', fontFamily: F }}>REPROCESSO</span>
         </div>
 
-        {/* SIM / NAO */}
-        <div style={{ height: H_DIR_AMIDO_OPT, flexShrink: 0, borderBottom: B, display: 'flex' }}>
-          <div style={{ flex: 1, borderRight: B, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-            <div style={{ width: 12, height: 12, border: B, flexShrink: 0 }} />
-            <span style={{ fontSize: 9, fontWeight: 700, fontFamily: F }}>SIM</span>
-          </div>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-            <div style={{ width: 12, height: 12, border: B, flexShrink: 0 }} />
-            <span style={{ fontSize: 9, fontWeight: 700, fontFamily: F }}>NÃO</span>
-          </div>
+        {/* SOLIDEZ */}
+        <div style={{
+          height: H_DIR_SOLIDEZ,
+          flexShrink: 0,
+          borderBottom: B,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', fontFamily: F }}>SOLIDEZ</span>
         </div>
 
-        {/* VAZIO */}
-        <div style={{ height: H_DIR_VAZIO, flexShrink: 0 }} />
-
+        {/* Resto (padding visual) */}
+        {H_DIR_RESTO > 0 && (
+          <div style={{ height: H_DIR_RESTO, flexShrink: 0 }} />
+        )}
       </div>
     </div>
   )
