@@ -1,0 +1,63 @@
+# Docker Compose para DESENVOLVIMENTO
+# Usa volumes para hot-reload — não faz build da imagem
+# Uso: docker compose -f docker-compose.dev.yml up
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: colortim_postgres_dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: colortim
+      POSTGRES_PASSWORD: colortim_pass
+      POSTGRES_DB: colortim_erp
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U colortim -d colortim_erp']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: node:20-alpine
+    container_name: colortim_backend_dev
+    working_dir: /app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://colortim:colortim_pass@postgres:5432/colortim_erp
+      JWT_SECRET: ${JWT_SECRET:-dev_secret_change_in_production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
+      PORT: 3001
+      NODE_ENV: development
+      FRONTEND_URL: http://localhost:5173
+    ports:
+      - '3001:3001'
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    command: sh -c "npm install && npx prisma migrate deploy && npx tsx watch src/index.ts"
+
+  frontend:
+    image: node:20-alpine
+    container_name: colortim_frontend_dev
+    working_dir: /app
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
+    ports:
+      - '5173:5173'
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: sh -c "npm install && npm run dev -- --host"
+
+volumes:
+  postgres_dev_data:

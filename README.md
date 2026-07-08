@@ -10,8 +10,8 @@ Sistema interno de gestão de ordens de produção para a **Colortim** — contr
 |--------|------------|
 | Frontend | React 18 + TypeScript + Vite + Tailwind CSS |
 | Backend | Node.js + Express + TypeScript |
-| Banco de dados | PostgreSQL |
-| ORM | Drizzle ORM |
+| Banco de dados | PostgreSQL 16 |
+| ORM | Prisma |
 | Container | Docker + Docker Compose |
 
 ---
@@ -20,18 +20,22 @@ Sistema interno de gestão de ordens de produção para a **Colortim** — contr
 
 ```
 projetocolortim/
-├── frontend/          # React + Vite
+├── frontend/                  # React + Vite
+│   ├── Dockerfile
+│   ├── nginx.conf
 │   └── src/
 │       ├── components/
 │       │   └── almoxarifado/  # ItemRow, OPForm, OPTable
 │       ├── pages/
 │       └── hooks/
-├── backend/           # Express + Drizzle
+├── backend/                   # Express + Prisma
+│   ├── Dockerfile
+│   ├── prisma/
+│   │   └── schema.prisma
 │   └── src/
-│       ├── routes/
-│       └── db/
-├── docker-compose.yml
-└── .env.example       # Variáveis necessárias
+├── docker-compose.yml         # Produção (build completo)
+├── docker-compose.dev.yml     # Desenvolvimento (hot-reload)
+└── .env.example
 ```
 
 ---
@@ -39,46 +43,58 @@ projetocolortim/
 ## 🚀 Rodando com Docker (recomendado)
 
 ### Pré-requisitos
-- [Docker](https://www.docker.com/) ≥ 24
-- [Docker Compose](https://docs.docker.com/compose/) ≥ 2
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) ≥ 24 (Windows/Mac) ou Docker Engine (Linux)
+- Git
 
-### Passos
+### 1️⃣ Primeira vez — configure o ambiente
 
 ```bash
-# 1. Clone o repositório
+# Clone o repositório
 git clone https://github.com/matheusfabio08/projetocolortim.git
 cd projetocolortim
 
-# 2. Configure as variáveis de ambiente
+# Crie o .env a partir do exemplo
 cp .env.example .env
-# Edite o .env com suas credenciais
-
-# 3. Suba todos os serviços
-docker compose up -d
-
-# 4. Acesse
-# Frontend: http://localhost:5173
-# Backend:  http://localhost:3000
 ```
 
----
+Edite o `.env` com suas configurações (veja a seção Variáveis de Ambiente abaixo).
 
-## ⚙️ Rodando em modo desenvolvimento (sem Docker)
-
-### Backend
+### 2️⃣ Desenvolvimento (hot-reload)
 
 ```bash
-cd backend
-npm install
-npm run dev
+docker compose -f docker-compose.dev.yml up
 ```
 
-### Frontend
+- Frontend: http://localhost:5173 (Vite com hot-reload)
+- Backend: http://localhost:3001 (tsx watch)
+- Banco: `localhost:5432`
+
+### 3️⃣ Produção (build completo)
 
 ```bash
-cd frontend
-npm install
-npm run dev
+docker compose up -d --build
+```
+
+- Frontend: http://localhost:80
+- Backend: http://localhost:3001
+
+### Comandos úteis
+
+```bash
+# Ver logs em tempo real
+docker compose logs -f
+
+# Parar tudo
+docker compose down
+
+# Parar e apagar o banco (CUIDADO: perde os dados)
+docker compose down -v
+
+# Rodar migrations manualmente
+docker compose exec backend npx prisma migrate deploy
+
+# Abrir Prisma Studio (interface visual do banco)
+docker compose exec backend npx prisma studio
 ```
 
 ---
@@ -89,14 +105,19 @@ Copie `.env.example` para `.env` e preencha:
 
 ```env
 # Banco de dados
-DATABASE_URL=postgresql://usuario:senha@localhost:5432/colortim
+DATABASE_URL=postgresql://colortim:colortim_pass@postgres:5432/colortim_erp
+
+# JWT
+JWT_SECRET=troque_por_uma_string_aleatoria_longa
+JWT_EXPIRES_IN=8h
 
 # Backend
-PORT=3000
+PORT=3001
 NODE_ENV=development
 
 # Frontend (Vite)
-VITE_API_URL=http://localhost:3000
+VITE_API_URL=http://localhost:3001
+FRONTEND_URL=http://localhost:5173
 ```
 
 > ⚠️ **Nunca commite o arquivo `.env`** — ele está no `.gitignore`.
