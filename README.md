@@ -1,48 +1,75 @@
-# Colortim ERP
+# 🎨 Projeto Colortim
 
-Sistema ERP industrial reconstruído com stack moderna e segura.
+Sistema interno de gestão de ordens de produção para a **Colortim** — controle de almoxarifado, rastreamento de status, fichas de produção e relatórios.
 
-## Stack
+---
 
-- **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS
-- **Backend**: Node.js + Express + TypeScript
-- **ORM**: Prisma
-- **Banco de dados**: PostgreSQL 16
-- **Autenticação**: JWT + sessões persistidas no banco
-- **Segurança**: Helmet, CORS, Rate Limiting, bcrypt, Zod validation
+## 🏗️ Stack
 
-## Pré-requisitos
+| Camada | Tecnologia |
+|--------|------------|
+| Frontend | React 18 + TypeScript + Vite + Tailwind CSS |
+| Backend | Node.js + Express + TypeScript |
+| Banco de dados | PostgreSQL |
+| ORM | Drizzle ORM |
+| Container | Docker + Docker Compose |
 
-- Node.js 20+
-- PostgreSQL 16+ (ou Docker)
+---
 
-## Setup com Docker (recomendado)
+## 📁 Estrutura do Projeto
 
-```bash
-# Copie e edite o .env
-cp backend/.env.example backend/.env
-# Edite JWT_SECRET com um valor aleatório longo (mínimo 64 chars)
-
-# Suba tudo
-docker-compose up -d
-
-# Rode o seed (primeira vez)
-docker exec colortim_backend npx tsx src/seed.ts
+```
+projetocolortim/
+├── frontend/          # React + Vite
+│   └── src/
+│       ├── components/
+│       │   └── almoxarifado/  # ItemRow, OPForm, OPTable
+│       ├── pages/
+│       └── hooks/
+├── backend/           # Express + Drizzle
+│   └── src/
+│       ├── routes/
+│       └── db/
+├── docker-compose.yml
+└── .env.example       # Variáveis necessárias
 ```
 
-Acesse em: `http://localhost`
+---
 
-## Setup manual
+## 🚀 Rodando com Docker (recomendado)
+
+### Pré-requisitos
+- [Docker](https://www.docker.com/) ≥ 24
+- [Docker Compose](https://docs.docker.com/compose/) ≥ 2
+
+### Passos
+
+```bash
+# 1. Clone o repositório
+git clone https://github.com/matheusfabio08/projetocolortim.git
+cd projetocolortim
+
+# 2. Configure as variáveis de ambiente
+cp .env.example .env
+# Edite o .env com suas credenciais
+
+# 3. Suba todos os serviços
+docker compose up -d
+
+# 4. Acesse
+# Frontend: http://localhost:5173
+# Backend:  http://localhost:3000
+```
+
+---
+
+## ⚙️ Rodando em modo desenvolvimento (sem Docker)
 
 ### Backend
 
 ```bash
 cd backend
-cp .env.example .env
-# Configure DATABASE_URL e JWT_SECRET no .env
 npm install
-npx prisma migrate dev --name init
-npx tsx src/seed.ts
 npm run dev
 ```
 
@@ -54,43 +81,46 @@ npm install
 npm run dev
 ```
 
-## Credenciais padrão (seed)
+---
 
-| Usuário | Senha | Role |
-|---------|-------|------|
-| `admin` | `Admin@2025!` | ADMIN |
+## 🔑 Variáveis de Ambiente
 
-> ⚠️ Altere a senha do admin imediatamente em produção!
+Copie `.env.example` para `.env` e preencha:
 
-## Módulos do sistema
+```env
+# Banco de dados
+DATABASE_URL=postgresql://usuario:senha@localhost:5432/colortim
 
-| Módulo | Descrição |
-|--------|-----------|
-| Dashboard | KPIs e visão geral |
-| Gerenciamento | Gestão de OPs e relatórios |
-| PCP | Planejamento e controle de produção |
-| Almoxarifado | Controle de materiais |
-| Preparação | Preparação individual e em lote |
-| Produção | Boxes 1, 2, 3 |
-| Secadora | Controle de secagem |
-| Destrinchagem | Processo de destrinchagem |
-| Enrolagem | Processo de enrolagem |
-| Qualidade | Controle de qualidade |
-| Laboratório | Análises laboratoriais |
-| Pesagem | Controle de pesagem |
-| Box 4/5/6 | Boxes finais |
-| Lista de Saída | Despacho e saída |
-| Qualidade Tecido | Controle de qualidade do tecido |
-| Scrolls | Visualização geral de OPs |
-| Admin | Gestão de usuários e acessos |
+# Backend
+PORT=3000
+NODE_ENV=development
 
-## Segurança
+# Frontend (Vite)
+VITE_API_URL=http://localhost:3000
+```
 
-- JWT com expiração configurável + sessões no banco
-- Rate limiting (login: 20 req/15min; API: 500 req/15min)
-- Headers HTTP seguros via Helmet
-- CORS restrito à origem configurada
-- Hashing bcrypt com salt 12
-- Validação de inputs com Zod em todas as rotas
-- Proteção contra SQL injection via Prisma ORM
-- Role-based access control (RBAC)
+> ⚠️ **Nunca commite o arquivo `.env`** — ele está no `.gitignore`.
+
+---
+
+## 📋 Funcionalidades
+
+- **Almoxarifado** — criação e gestão de Ordens de Produção (OPs)
+- **Ficha de Produção** — geração e impressão de fichas por OP
+- **Rastreamento de Status** — acompanhamento por etapa (laboratório, qualidade, produção, etc.)
+- **Fibras** — cadastro e seleção de fibras por item
+- **Regiões** — segmentação por Jaraguá / Brusque / Gaspar
+
+---
+
+## 🤝 Contribuindo
+
+1. Crie uma branch: `git checkout -b feat/minha-feature`
+2. Faça suas alterações e commite: `git commit -m 'feat: minha feature'`
+3. Abra um Pull Request
+
+---
+
+## 📄 Licença
+
+Projeto privado — uso interno Colortim.
