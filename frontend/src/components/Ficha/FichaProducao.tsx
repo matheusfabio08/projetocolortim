@@ -20,15 +20,12 @@ const W_LBL = Math.round(W_DIR * 0.52)  // ~148
 // === ALTURAS COL ESQ ===
 const H_ESQ_MAIN   = 435
 const H_ESQ_FOOTER = H_TOTAL - H_ESQ_MAIN  // 105
-const HALF = Math.floor(H_ESQ_MAIN / 2)    // 217
 
 // === ALTURAS COL CENTRO ===
-// Linha PRESENCA DE GOMA (label + SIM/NAO) alinhada com bloco inferior dir
 const H_CEN_VAZIO       = 340
-const H_CEN_GOMA_HEADER = 28   // "PRESENÇA DE GOMA?"
-const H_CEN_GOMA_OPTS   = 28   // SIM / NÃO
-const H_CEN_APROV_HDR   = 28   // "APROVAÇÃO E DATA DE SAÍDA"
-const H_CEN_APROV_ROWS  = H_TOTAL - H_CEN_VAZIO - H_CEN_GOMA_HEADER - H_CEN_GOMA_OPTS - H_CEN_APROV_HDR // restante para sub-linhas
+const H_CEN_GOMA_HEADER = 28
+const H_CEN_GOMA_OPTS   = 28
+const H_CEN_APROV_HDR   = 28
 
 // === ALTURAS COL DIREITA ===
 const H_DIR_PEDIDO    = 24
@@ -36,12 +33,11 @@ const H_DIR_HORA      = 22
 const H_DIR_ENTRADA   = 22
 const H_DIR_RETORNO   = 22
 const H_DIR_CONF      = 24
-const H_DIR_TABELA    = H_DIR_PEDIDO + H_DIR_HORA + H_DIR_ENTRADA + H_DIR_RETORNO + H_DIR_CONF  // 114
+const H_DIR_TABELA    = H_DIR_PEDIDO + H_DIR_HORA + H_DIR_ENTRADA + H_DIR_RETORNO + H_DIR_CONF
 const H_DIR_NUMERO    = 196
-// REPROCESSO + SOLIDEZ ficam abaixo do número
 const H_DIR_REPROCESSO = 26
 const H_DIR_SOLIDEZ    = 26
-const H_DIR_RESTO      = H_TOTAL - H_DIR_TABELA - H_DIR_NUMERO - H_DIR_REPROCESSO - H_DIR_SOLIDEZ // sobra
+const H_DIR_RESTO      = H_TOTAL - H_DIR_TABELA - H_DIR_NUMERO - H_DIR_REPROCESSO - H_DIR_SOLIDEZ
 
 interface FichaProducaoProps {
   nomeCliente?: string
@@ -67,7 +63,6 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
   materiais   = [],
 }) => {
 
-  // Número de sub-linhas de aprovação (3 linhas)
   const aprovRows = 3
 
   return (
@@ -96,7 +91,7 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
         flexDirection: 'column',
       }}>
 
-        {/* Celula principal */}
+        {/* Celula principal: empresa + cor + material centralizados */}
         <div style={{
           height: H_ESQ_MAIN,
           flexShrink: 0,
@@ -104,73 +99,49 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
           boxSizing: 'border-box',
           display: 'flex',
           flexDirection: 'column',
+          alignItems: 'flex-start',
+          justifyContent: 'center',
+          paddingLeft: 10,
+          paddingRight: 6,
+          gap: 0,
         }}>
 
-          {/* METADE SUPERIOR: CLIENTE */}
-          <div style={{
-            height: HALF,
-            flexShrink: 0,
-            display: 'flex',
-            alignItems: 'center',
-            paddingLeft: 10,
-            paddingRight: 6,
+          {/* NOME EMPRESA */}
+          <span style={{
+            fontSize: 52,
+            fontWeight: 700,
+            lineHeight: 1.15,
+            fontFamily: F,
           }}>
-            <span style={{
-              fontSize: 52,
-              fontWeight: 700,
-              lineHeight: 1.1,
-              fontFamily: F,
-            }}>
-              {nomeCliente}
-            </span>
-          </div>
+            {nomeCliente}
+          </span>
 
-          {/* METADE INFERIOR: COR + materiais */}
+          {/* COR */}
+          <span style={{
+            fontSize: 52,
+            fontWeight: 700,
+            lineHeight: 1.15,
+            fontFamily: F,
+          }}>
+            {cor}
+          </span>
+
+          {/* MATERIAIS — logo abaixo da cor */}
           <div style={{
-            height: HALF,
-            flexShrink: 0,
+            marginTop: 10,
             display: 'flex',
             flexDirection: 'column',
-            paddingLeft: 10,
-            paddingRight: 6,
           }}>
-
-            {/* COR */}
-            <div style={{
-              height: Math.floor(HALF * 0.46),
-              flexShrink: 0,
-              display: 'flex',
-              alignItems: 'center',
-            }}>
-              <span style={{
-                fontSize: 52,
-                fontWeight: 700,
-                lineHeight: 1.1,
+            {materiais.map((m, i) => (
+              <p key={i} style={{
+                margin: 0,
+                fontSize: 13,
+                fontWeight: 400,
+                lineHeight: 1.7,
+                whiteSpace: 'nowrap',
                 fontFamily: F,
-              }}>
-                {cor}
-              </span>
-            </div>
-
-            {/* MATERIAIS */}
-            <div style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'flex-end',
-              paddingBottom: 10,
-            }}>
-              {materiais.map((m, i) => (
-                <p key={i} style={{
-                  margin: 0,
-                  fontSize: 13,
-                  fontWeight: 400,
-                  lineHeight: 1.7,
-                  whiteSpace: 'nowrap',
-                  fontFamily: F,
-                }}>{m}</p>
-              ))}
-            </div>
+              }}>{m}</p>
+            ))}
           </div>
         </div>
 
@@ -260,9 +231,7 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
               borderBottom: i < aprovRows - 1 ? B : 'none',
               display: 'flex',
             }}>
-              {/* coluna data */}
               <div style={{ width: 60, borderRight: B, flexShrink: 0 }} />
-              {/* coluna assinatura */}
               <div style={{ flex: 1 }} />
             </div>
           ))}
@@ -304,7 +273,7 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, fontFamily: F }}>{retorno}</div>
         </div>
 
-        {/* CONF. — valor dinâmico */}
+        {/* CONF. */}
         <div style={{ height: H_DIR_CONF, flexShrink: 0, borderBottom: B2, display: 'flex' }}>
           <div style={{ width: W_LBL, flexShrink: 0, borderRight: B, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, fontFamily: F }}>CONF.</div>
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, fontFamily: F }}>{conf}</div>
@@ -339,7 +308,6 @@ const FichaProducao: React.FC<FichaProducaoProps> = ({
           <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', fontFamily: F }}>SOLIDEZ</span>
         </div>
 
-        {/* Resto (padding visual) */}
         {H_DIR_RESTO > 0 && (
           <div style={{ height: H_DIR_RESTO, flexShrink: 0 }} />
         )}
